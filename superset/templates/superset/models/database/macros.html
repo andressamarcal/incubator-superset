@@ -16,6 +16,87 @@
   specific language governing permissions and limitations
   under the License.
 #}
+{% macro imported_add() %}
+  <script>
+    let imported_checkbox = $("#imported");
+
+    imported_checkbox.parent().append(
+      "<label id=\"my-file-selector-label\" class=\"btn btn-default btn-sm\" for=\"my-file-selector\" disabled>\n" +
+      "  <input id=\"my-file-selector\" type=\"file\" name=\"file\" style=\"display:none;\" onchange=\"$('#upload-file-info').html(this.files[0].name)\" disabled>\n" +
+      "  Choose File\n" +
+      "</label>\n" +
+      "<span class=\"label label-info\" id=\"upload-file-info\"></span>"
+    );
+
+    imported_checkbox.click(function () {
+      const not_imported_options = [
+        "sqlalchemy_uri",
+        "allow_csv_upload",
+        "allow_ctas",
+        "allow_dml",
+        "force_ctas_schema",
+        "allow_multi_schema_metadata_fetch",
+        "extra",
+      ];
+
+      const imported_options = [
+        "my-file-selector",
+        "my-file-selector-label",
+      ];
+
+      if (imported_checkbox.prop("checked")) {
+        for (const option of not_imported_options) {
+          $(`#${option}`).parent().parent().hide();
+        }
+
+        for (const option of imported_options) {
+          $(`#${option}`).prop("disabled", false);
+        }
+      }
+      else {
+        for (const option of not_imported_options) {
+          $(`#${option}`).parent().parent().show();
+        }
+
+        for (const option of imported_options) {
+          $(`#${option}`).prop("disabled", true);
+        }
+
+        $("#my-file-selector").val("");
+        $("#upload-file-info").text("");
+      }
+    })
+
+  </script>
+{% endmacro %}
+
+{% macro imported_edit() %}
+  <script>
+    let imported_checkbox = $("#imported");
+
+    if (imported_checkbox.prop("checked")) {
+      const options = [
+        "sqlalchemy_uri",
+        "allow_csv_upload",
+        "allow_ctas",
+        "allow_dml",
+        "force_ctas_schema",
+        "allow_multi_schema_metadata_fetch",
+        "extra",
+      ];
+
+      for (const option of options) {
+        $(`#${option}`).parent().parent().remove();
+      }
+
+      imported_checkbox.prop("disabled", true);
+    }
+    else {
+      imported_checkbox.parent().parent().remove();
+    }
+  </script>
+{% endmacro %}
+
 {% macro testconn() %}
   <script>
     $("#sqlalchemy_uri").parent()

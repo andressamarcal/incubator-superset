@@ -44,6 +44,7 @@ class DatabaseMixin:  # noqa
     list_columns = [
         "database_name",
         "backend",
+        "imported",
         "allow_run_async",
         "allow_dml",
         "allow_csv_upload",
@@ -53,6 +54,7 @@ class DatabaseMixin:  # noqa
     ]
     order_columns = [
         "database_name",
+        "imported",
         "allow_run_async",
         "allow_dml",
         "modified",
@@ -61,6 +63,7 @@ class DatabaseMixin:  # noqa
     ]
     add_columns = [
         "database_name",
+        "imported",
         "sqlalchemy_uri",
         "cache_timeout",
         "expose_in_sqllab",
@@ -84,6 +87,7 @@ class DatabaseMixin:  # noqa
     edit_columns = add_columns
     show_columns = [
         "tables",
+        "imported",
         "cache_timeout",
         "extra",
         "database_name",
