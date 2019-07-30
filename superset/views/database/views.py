@@ -61,6 +61,17 @@ appbuilder.add_link(
 )
 
 
+appbuilder.add_link(
+    "Import Databases",
+    label=__("Import Databases"),
+    href="/superset/import_databases",
+    icon="fa-cloud-upload",
+    category="Manage",
+    category_label=__("Manage"),
+    category_icon="fa-wrench",
+)
+
+
 appbuilder.add_view(
     DatabaseView,
     "Databases",

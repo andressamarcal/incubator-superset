@@ -74,7 +74,7 @@ from superset.models.user_attributes import UserAttribute
 from superset.sql_parse import ParsedQuery
 from superset.sql_validators import get_validator_by_name
 from superset.utils import core as utils
-from superset.utils import dashboard_import_export
+from superset.utils import dashboard_import_export, database_import
 from superset.utils.dates import now_as_float
 from superset.utils.decorators import etag_cache
 from .base import (
@@ -100,6 +100,8 @@ from .utils import (
     get_form_data,
     get_viz,
 )
+
+from zipfile import BadZipFile
 
 config = app.config
 CACHE_DEFAULT_TIMEOUT = config.get("CACHE_DEFAULT_TIMEOUT", 0)
@@ -1125,7 +1127,37 @@ class Superset(BaseSupersetView):
                     "danger",
                 )
             return redirect("/dashboard/list/")
-        return self.render_template("superset/import_dashboards.html")
+        return self.render_template("superset/import.html", title="dashboards")
+
+    @event_logger.log_this
+    @has_access
+    @expose("/import_databases", methods=["GET", "POST"])
+    def import_databases(self):
+        """"""
+        f = request.files.get("file")
+        if request.method == "POST" and f:
+            try:
+                database_import.import_database(db.session, f.stream)
+            except BadZipFile:
+                flash(
+                    _(
+                        "Cannot import database: \n"
+                        "Make sure you uploaded a zip file",
+                    ),
+                    "danger",
+                )
+                # TODO handle zip file with wrong files
+            except Exception:
+                flash(
+                    _(
+                        "An unknown error occurred. "
+                        "Please contact your Superset administrator"
+                    ),
+                    "danger",
+                )
+            return redirect("databaseview/list/")
+        logging.warning("HELLO OUT")
+        return self.render_template("superset/import.html", title="databases")
 
     @event_logger.log_this
     @has_access
