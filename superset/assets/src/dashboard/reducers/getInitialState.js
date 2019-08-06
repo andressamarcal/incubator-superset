@@ -224,6 +224,7 @@ export default function(bootstrapData) {
           : BUILDER_PANE_TYPE.NONE,
       hasUnsavedChanges: false,
       maxUndoHistoryExceeded: false,
+      standalone: dashboard.standalone_mode,
     },
     dashboardLayout,
     messageToasts: [],

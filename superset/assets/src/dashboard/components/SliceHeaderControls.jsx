@@ -158,18 +158,6 @@ class SliceHeaderControls extends React.PureComponent {
               {t('Explore chart')}
             </MenuItem>
           )}
-
-          <URLShortLinkModal
-            url={getDashboardUrl(
-              window.location.pathname,
-              filters,
-              componentId,
-            )}
-            addDangerToast={addDangerToast}
-            isMenuItem
-            title={t('Share chart')}
-            triggerNode={<span>{t('Share chart')}</span>}
-          />
         </Dropdown.Menu>
       </Dropdown>
     );

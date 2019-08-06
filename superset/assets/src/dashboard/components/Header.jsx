@@ -76,6 +76,8 @@ const propTypes = {
   logEvent: PropTypes.func.isRequired,
   hasUnsavedChanges: PropTypes.bool.isRequired,
   maxUndoHistoryExceeded: PropTypes.bool.isRequired,
+  standalone: PropTypes.bool.isRequired,
+  userId: PropTypes.bool.isRequired,
 
   // redux
   onUndo: PropTypes.func.isRequired,
@@ -282,6 +284,8 @@ class Header extends React.PureComponent {
       isLoading,
       refreshFrequency,
       setRefreshFrequency,
+      standalone,
+      userId,
     } = this.props;
 
     const userCanEdit = dashboardInfo.dash_edit_perm;
@@ -306,14 +310,16 @@ class Header extends React.PureComponent {
               canSave={userCanSaveAs}
             />
           </span>
-          <span className="favstar">
-            <FaveStar
-              itemId={dashboardInfo.id}
-              fetchFaveStar={this.props.fetchFaveStar}
-              saveFaveStar={this.props.saveFaveStar}
-              isStarred={this.props.isStarred}
-            />
-          </span>
+          {userId && (
+            <span className="favstar">
+              <FaveStar
+                itemId={dashboardInfo.id}
+                fetchFaveStar={this.props.fetchFaveStar}
+                saveFaveStar={this.props.saveFaveStar}
+                isStarred={this.props.isStarred}
+              />
+            </span>
+          )}
         </div>
 
         <div className="button-container">
@@ -391,7 +397,7 @@ class Header extends React.PureComponent {
             </div>
           )}
 
-          {!editMode && !hasUnsavedChanges && (
+          {!standalone && !editMode && !hasUnsavedChanges && (
             <Button
               bsSize="small"
               onClick={this.toggleEditMode}
@@ -402,30 +408,43 @@ class Header extends React.PureComponent {
             </Button>
           )}
 
-          <HeaderActionsDropdown
-            addSuccessToast={this.props.addSuccessToast}
-            addDangerToast={this.props.addDangerToast}
-            dashboardId={dashboardInfo.id}
-            dashboardTitle={dashboardTitle}
-            layout={layout}
-            filters={filters}
-            expandedSlices={expandedSlices}
-            css={css}
-            colorNamespace={colorNamespace}
-            colorScheme={colorScheme}
-            onSave={onSave}
-            onChange={onChange}
-            forceRefreshAllCharts={this.forceRefresh}
-            startPeriodicRender={this.startPeriodicRender}
-            refreshFrequency={refreshFrequency}
-            setRefreshFrequency={setRefreshFrequency}
-            updateCss={updateCss}
-            editMode={editMode}
-            hasUnsavedChanges={hasUnsavedChanges}
-            userCanEdit={userCanEdit}
-            userCanSave={userCanSaveAs}
-            isLoading={isLoading}
-          />
+          {standalone && (
+            <Button
+              bsSize="small"
+              onClick={this.forceRefresh}
+              bsStyle={popButton ? 'primary' : undefined}
+              disabled={isLoading}
+            >
+              {t('Force refresh dashboard')}
+            </Button>
+          )}
+
+          {!standalone && (
+            <HeaderActionsDropdown
+              addSuccessToast={this.props.addSuccessToast}
+              addDangerToast={this.props.addDangerToast}
+              dashboardId={dashboardInfo.id}
+              dashboardTitle={dashboardTitle}
+              layout={layout}
+              filters={filters}
+              expandedSlices={expandedSlices}
+              css={css}
+              colorNamespace={colorNamespace}
+              colorScheme={colorScheme}
+              onSave={onSave}
+              onChange={onChange}
+              forceRefreshAllCharts={this.forceRefresh}
+              startPeriodicRender={this.startPeriodicRender}
+              refreshFrequency={refreshFrequency}
+              setRefreshFrequency={setRefreshFrequency}
+              updateCss={updateCss}
+              editMode={editMode}
+              hasUnsavedChanges={hasUnsavedChanges}
+              userCanEdit={userCanEdit}
+              userCanSave={userCanSaveAs}
+              isLoading={isLoading}
+            />
+          )}
         </div>
       </div>
     );
