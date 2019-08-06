@@ -253,6 +253,8 @@ class DashboardFilter(SupersetFilter):
         return query
 
 
+from .dashboard import views  # noqa
+
 from .database import api as database_api  # noqa
 from .database import views as in_views  # noqa
 
@@ -437,13 +439,15 @@ class DashboardModelView(SupersetModelView, DeleteMixin):  # noqa
     route_base = "/dashboard"
     datamodel = SQLAInterface(models.Dashboard)
 
+    list_template = "superset/models/dashboard/list.html"
+
     list_title = _("Dashboards")
     show_title = _("Show Dashboard")
     add_title = _("Add Dashboard")
     edit_title = _("Edit Dashboard")
 
-    list_columns = ["dashboard_link", "creator", "published", "modified"]
-    order_columns = ["modified", "published"]
+    list_columns = ["dashboard_link", "is_automatic", "creator", "published", "modified"]
+    order_columns = ["is_automatic", "modified", "published"]
     edit_columns = [
         "dashboard_title",
         "slug",
@@ -453,7 +457,10 @@ class DashboardModelView(SupersetModelView, DeleteMixin):  # noqa
         "json_metadata",
         "published",
     ]
-    show_columns = edit_columns + ["table_names", "charts"]
+    show_columns = edit_columns[:3] + [
+            "is_automatic",
+            "automatic_info"
+        ] + edit_columns[3:] + ["table_names", "charts"]
     search_columns = ("dashboard_title", "slug", "owners", "published")
     add_columns = edit_columns
     base_order = ("changed_on", "desc")
@@ -484,6 +491,8 @@ class DashboardModelView(SupersetModelView, DeleteMixin):  # noqa
     }
     base_filters = [["slice", DashboardFilter, lambda: []]]
     label_columns = {
+        "is_automatic": _("Automatic"),
+        "automatic_info": _("Automatic Info"),
         "dashboard_link": _("Dashboard"),
         "dashboard_title": _("Title"),
         "slug": _("Slug"),
@@ -517,6 +526,7 @@ class DashboardModelView(SupersetModelView, DeleteMixin):  # noqa
 
     def pre_delete(self, obj):
         check_ownership(obj)
+        # TODO
 
     @action("mulexport", __("Export"), __("Export dashboards?"), "fa-database")
     def mulexport(self, items):
@@ -539,6 +549,25 @@ class DashboardModelView(SupersetModelView, DeleteMixin):  # noqa
         return self.render_template(
             "superset/export_dashboards.html", dashboards_url="/dashboard/list"
         )
+
+    @expose("/edit/<pk>", methods=["GET", "POST"])
+    @has_access
+    def edit(self, pk):
+        pk = self._deserialize_pk_if_composite(pk)
+
+        if db.session.query(models.AutomaticDashboard).filter_by(id=pk).all() == []:  # noqa
+            widgets = self._edit(pk)
+            if not widgets:
+                return self.post_edit_redirect()
+            else:
+                return self.render_template(
+                    self.edit_template,
+                    title=self.edit_title,
+                    widgets=widgets,
+                    related_views=self._related_views,
+                )
+        else:
+            redirect("/automaticdashboardeditview/form")
 
 
 appbuilder.add_view(

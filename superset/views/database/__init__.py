@@ -61,6 +61,7 @@ class DatabaseMixin:  # noqa
     ]
     add_columns = [
         "database_name",
+        "groups",
         "sqlalchemy_uri",
         "cache_timeout",
         "expose_in_sqllab",
@@ -84,6 +85,7 @@ class DatabaseMixin:  # noqa
     edit_columns = add_columns
     show_columns = [
         "tables",
+        "groups",
         "cache_timeout",
         "extra",
         "database_name",
@@ -96,6 +98,7 @@ class DatabaseMixin:  # noqa
     ]
     base_order = ("changed_on", "desc")
     description_columns = {
+        "groups": _("To which this database belongs"),
         "sqlalchemy_uri": utils.markdown(
             "Refer to the "
             "[SqlAlchemy docs]"

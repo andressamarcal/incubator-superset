@@ -1,0 +1,29 @@
+{% extends "appbuilder/general/model/list.html" %}
+
+{% block tail_js %}
+    {{ super() }}
+
+    {# When the user tries to create a new dashboard
+        a dropdown will appear to choose between
+        a manual or automatic dashboard
+    #}
+    <script>
+        $(".list-add-action").html(
+            "<a class='btn btn-sm btn-primary dropdown-toggle' data-toggle='dropdown'>" +
+                "<i class='fa fa-plus'></i>" +
+            "</a>" +
+            "<ul class='dropdown-menu'>" +
+                "<li>" +
+                    "<a href='/dashboard/add'>" +
+                        "<i class='fa fa-hand-paper-o'></i> Manual" +
+                    "</a>" +
+                "</li>" +
+                "<li>" +
+                    "<a href='/automaticdashboardview/form'>" +
+                        "<i class='fa fa-magic'></i> Automatic" +
+                    "</a>" +
+                "</li>" +
+            "</ul>"
+        );
+    </script>
+{% endblock %}

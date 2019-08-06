@@ -390,6 +390,25 @@ sqla.event.listen(Slice, "before_insert", set_related_perm)
 sqla.event.listen(Slice, "before_update", set_related_perm)
 
 
+class DatabaseGroup(Model, AuditMixinNullable):
+
+    """A group of databases to be used on automatic dashboards"""
+
+    __tablename__ = "database_groups"
+    __table_args__ = (
+        UniqueConstraint("name"),
+        UniqueConstraint("dashboard_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(250))
+    dashboard_id = Column(Integer, ForeignKey("automatic_dashboards.id"))
+    # TODO check owners
+
+    def __repr__(self):
+        return self.name or str(self.id)
+
+
 dashboard_slices = Table(
     "dashboard_slices",
     metadata,
@@ -414,6 +433,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
 
     __tablename__ = "dashboards"
     id = Column(Integer, primary_key=True)
+    automatic_info = relationship("AutomaticDashboard", backref="main_dashboard", uselist=False)
     dashboard_title = Column(String(500))
     position_json = Column(utils.MediumText())
     description = Column(Text)
@@ -435,6 +455,9 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
 
     def __repr__(self):
         return self.dashboard_title or str(self.id)
+
+    def is_automatic(self):
+        return self.automatic_info is not None
 
     @property
     def table_names(self):
@@ -712,6 +735,35 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
         )
 
 
+class AutomaticDashboard(Model, AuditMixinNullable): #, ImportMixin
+    __tablename__ = "automatic_dashboards"
+
+    id = Column(Integer, ForeignKey("dashboards.id"), primary_key=True)
+    group = relationship("DatabaseGroup", backref="automatic_dashboard", uselist=False)
+    datasource_type = Column(String(200))
+    viz_type = Column(String(250))
+
+    def __repr__(self):
+        return json.dumps(
+            {
+                "Group": self.group,
+                "Datasource Type": self.datasource_type,
+                "Vizualization Type": self.viz_type,
+            },
+            indent=4,
+        )
+
+
+databases_groups = Table(
+    "databases_groups",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("database_group_id", Integer, ForeignKey("database_groups.id")),
+    Column("database_id", Integer, ForeignKey("dbs.id")),
+    UniqueConstraint("database_group_id", "database_id"),
+)
+
+
 class Database(Model, AuditMixinNullable, ImportMixin):
 
     """An ORM object that stores Database related information"""
@@ -726,6 +778,7 @@ class Database(Model, AuditMixinNullable, ImportMixin):
     database_name = Column(String(250), unique=True)
     sqlalchemy_uri = Column(String(1024))
     password = Column(EncryptedType(String(1024), config.get("SECRET_KEY")))
+    groups = relationship("DatabaseGroup", secondary=databases_groups, backref="dbs")
     cache_timeout = Column(Integer)
     select_as_create_table_as = Column(Boolean, default=False)
     expose_in_sqllab = Column(Boolean, default=True)

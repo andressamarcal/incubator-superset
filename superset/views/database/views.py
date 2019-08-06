@@ -29,7 +29,7 @@ from superset import app, appbuilder, security_manager
 from superset.connectors.sqla.models import SqlaTable
 import superset.models.core as models
 from superset.utils import core as utils
-from superset.views.base import DeleteMixin, SupersetModelView, YamlExportMixin
+from superset.views.base import DeleteMixin, SupersetModelView, YamlExportMixin, check_ownership
 from . import DatabaseMixin
 from .forms import CsvToDatabaseForm
 
@@ -66,6 +66,46 @@ appbuilder.add_view(
     "Databases",
     label=__("Databases"),
     icon="fa-database",
+    category="Sources",
+    category_label=__("Sources"),
+    category_icon="fa-database",
+)
+
+
+class DatabaseGroupView(SupersetModelView, DeleteMixin):
+    route_base = "/database_groups"
+    datamodel = SQLAInterface(models.DatabaseGroup)
+
+    list_title = _("Database Groups")
+    show_title = _("Show Database Group")
+    add_title = _("Add Database Group")
+    edit_title = _("Edit Database Group")
+
+    list_columns = ["name"]
+    order_columns = list_columns
+    edit_columns = list_columns
+    show_columns = list_columns + ["dbs", "dashboard"]
+    search_columns = list_columns
+    add_columns = list_columns
+    base_order = ("name", "asc")
+    label_columns = {
+        "name": _("Name"),
+        "dbs": _("Databases"),
+    }
+
+    def pre_update(self, obj):
+        check_ownership(obj)
+
+    def pre_delete(self, obj):
+        check_ownership(obj)
+        # TODO
+
+
+appbuilder.add_view(
+    DatabaseGroupView,
+    "Database Groups",
+    label=__("Database Groups"),
+    icon="fa-object-group",
     category="Sources",
     category_label=__("Sources"),
     category_icon="fa-database",
