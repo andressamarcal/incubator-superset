@@ -499,6 +499,290 @@ class BaseViz(object):
     def json_data(self):
         return json.dumps(self.data)
 
+class MulitpleDatasourceViz(BaseViz):
+
+    """All visualizations derive this base class"""
+
+    viz_type = None
+    verbose_name = "Mulitple Datasource Viz"
+    credits = '<a href="https://github.com/aspedrosa">aspedrosa</a>'
+    is_timeseries = False
+    cache_type = "df"
+    enforce_numerical_metrics = True
+
+    def __init__(self, datasources, form_data, force=False):
+        if not datasources:
+            raise Exception(_("Viz is missing a datasource"))
+
+        self.datasources = datasources
+        self.request = request
+        self.viz_type = form_data.get("viz_type")
+        self.form_data = form_data
+
+        self.query = ""
+        self.token = self.form_data.get("token", "token_" + uuid.uuid4().hex[:8])
+
+        self.groupby = self.form_data.get("groupby") or []
+        self.time_shift = timedelta()
+
+        self.status = None
+        self.error_msg = ""
+        self.results = None
+        self.error_message = None
+        self.force = force
+
+        # Keeping track of whether some data came from cache
+        # this is useful to trigger the <CachedLabel /> when
+        # in the cases where visualization have many queries
+        # (FilterBox for instance)
+        self._some_from_cache = False
+        self._any_cache_key = None
+        self._any_cached_dttm = None
+        self._extra_chart_data = []
+
+        self.process_metrics()
+
+    def get_samples(self):
+        query_obj = self.query_obj()
+        query_obj.update(
+            {
+                "groupby": [],
+                "metrics": [],
+                "row_limit": 1000,
+                "columns": [o.column_name for o in self.datasource.columns],
+                # TODO maybe this imply that all datasources must have the same schema
+                # one solution might be to bring the code of the get_def method to here
+            }
+        )
+        dfs = self.get_df(query_obj)
+        return {datasource: df.to_dict(orient="records") for datasource, df in dfs.items()}
+
+    def get_df(self, query_obj=None):
+        """Returns a pandas dataframe based on the query object"""
+        if not query_obj:
+            query_obj = self.query_obj()
+        if not query_obj:
+            return None
+
+        dfs = {}
+        for datasource in self.datasources:
+
+            self.error_msg = ""
+
+            timestamp_format = None
+            if datasource.type == "table":
+                dttm_col = datasource.get_col(query_obj["granularity"])
+                if dttm_col:
+                    timestamp_format = dttm_col.python_date_format
+
+            # The datasource here can be different backend but the interface is common
+            self.results = datasource.query(query_obj)
+            self.query = self.results.query
+            self.status = self.results.status
+            self.error_message = self.results.error_message
+
+            df = self.results.df
+            # Transform the timestamp we received from database to pandas supported
+            # datetime format. If no python_date_format is specified, the pattern will
+            # be considered as the default ISO date format
+            # If the datetime format is unix, the parse will use the corresponding
+            # parsing logic.
+            if df is not None and not df.empty:
+                if DTTM_ALIAS in df.columns:
+                    if timestamp_format in ("epoch_s", "epoch_ms"):
+                        # Column has already been formatted as a timestamp.
+                        dttm_col = df[DTTM_ALIAS]
+                        one_ts_val = dttm_col[0]
+
+                        # convert time column to pandas Timestamp, but different
+                        # ways to convert depending on string or int types
+                        try:
+                            int(one_ts_val)
+                            is_integral = True
+                        except (ValueError, TypeError):
+                            is_integral = False
+                        if is_integral:
+                            unit = "s" if timestamp_format == "epoch_s" else "ms"
+                            df[DTTM_ALIAS] = pd.to_datetime(
+                                dttm_col, utc=False, unit=unit, origin="unix"
+                            )
+                        else:
+                            df[DTTM_ALIAS] = dttm_col.apply(pd.Timestamp)
+                    else:
+                        df[DTTM_ALIAS] = pd.to_datetime(
+                            df[DTTM_ALIAS], utc=False, format=timestamp_format
+                        )
+                    if datasource.offset:
+                        df[DTTM_ALIAS] += timedelta(hours=datasource.offset)
+                    df[DTTM_ALIAS] += self.time_shift
+
+                if self.enforce_numerical_metrics:
+                    self.df_metrics_to_num(df)
+
+                df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+            dfs[datasource.table_name] = df
+
+        return dfs
+
+    @property
+    def cache_timeout(self):
+        if self.form_data.get("cache_timeout") is not None:
+            return int(self.form_data.get("cache_timeout"))
+
+        datasources_cache_timeout = [ds.cache_timeout for ds in self.datasources]
+        if any(datasources_cache_timeout):
+            return max(datasources_cache_timeout)  # TODO max, min or get a config default value?
+
+        if any([hasattr(ds, "database") for ds in self.datasources]):
+            databases_cache_timeout = [ds.database.cache_timeout for ds in self.datasources if hasattr(ds, "database")]
+            if any(databases_cache_timeout):
+                return max(databases_cache_timeout)  # TODO Again max, min or get a config default value?
+
+        return config.get("CACHE_DEFAULT_TIMEOUT")
+
+    def cache_key(self, query_obj, **extra):
+        """
+        The cache key is made out of the key/values in `query_obj`, plus any
+        other key/values in `extra`.
+
+        We remove datetime bounds that are hard values, and replace them with
+        the use-provided inputs to bounds, which may be time-relative (as in
+        "5 days ago" or "now").
+
+        The `extra` arguments are currently used by time shift queries, since
+        different time shifts wil differ only in the `from_dttm` and `to_dttm`
+        values which are stripped.
+        """
+        cache_dict = copy.copy(query_obj)
+        cache_dict.update(extra)
+
+        for k in ["from_dttm", "to_dttm"]:
+            del cache_dict[k]
+
+        cache_dict["time_range"] = self.form_data.get("time_range")
+        for i, ds in enumerate(self.datasources):
+            cache_dict["datasource" + i] = ds.uid
+            cache_dict["extra_cache_keys" + i] = ds.get_extra_cache_keys(query_obj)
+        json_data = self.json_dumps(cache_dict, sort_keys=True)
+        return hashlib.md5(json_data.encode("utf-8")).hexdigest()
+
+    def get_payload(self, query_obj=None):
+        """Returns a payload of metadata and data"""
+        self.run_extra_queries()
+        payload = self.get_df_payload(query_obj)
+
+        dfs = payload.get("dfs")
+        if self.status != utils.QueryStatus.FAILED:
+            if dfs is not None and all(df.empty for df in dfs.values()):
+                payload["error"] = "No data"
+            else:
+                payload["data"] = self.get_data(dfs)
+        if "dfs" in payload:
+            del payload["dfs"]
+        return payload
+
+    def get_df_payload(self, query_obj=None, **kwargs):
+        """Handles caching around the df payload retrieval"""
+        if not query_obj:
+            query_obj = self.query_obj()
+        cache_key = self.cache_key(query_obj, **kwargs) if query_obj else None
+        logging.info("Cache key: {}".format(cache_key))
+        is_loaded = False
+        stacktrace = None
+        dfs = []
+        cached_dttm = datetime.utcnow().isoformat().split(".")[0]
+        if cache_key and cache and not self.force:
+            cache_value = cache.get(cache_key)
+            if cache_value:
+                stats_logger.incr("loaded_from_cache")
+                try:
+                    cache_value = pkl.loads(cache_value)
+                    dfs = cache_value["dfs"]
+                    self.query = cache_value["query"]
+                    self._any_cached_dttm = cache_value["dttm"]
+                    self._any_cache_key = cache_key
+                    self.status = utils.QueryStatus.SUCCESS
+                    is_loaded = True
+                except Exception as e:
+                    logging.exception(e)
+                    logging.error(
+                        "Error reading cache: " + utils.error_msg_from_exception(e)
+                    )
+                logging.info("Serving from cache")
+
+        if query_obj and not is_loaded:
+            try:
+                dfs = self.get_df(query_obj)
+                if self.status != utils.QueryStatus.FAILED:
+                    stats_logger.incr("loaded_from_source")
+                    is_loaded = True
+            except Exception as e:
+                logging.exception(e)
+                if not self.error_message:
+                    self.error_message = "{}".format(e)
+                self.status = utils.QueryStatus.FAILED
+                stacktrace = utils.get_stacktrace()
+
+            if (
+                    is_loaded
+                    and cache_key
+                    and cache
+                    and self.status != utils.QueryStatus.FAILED
+            ):
+                try:
+                    cache_value = dict(
+                        dttm=cached_dttm,
+                        dfs=dfs,
+                        query=self.query,
+                    )
+                    cache_value = pkl.dumps(cache_value, protocol=pkl.HIGHEST_PROTOCOL)
+
+                    logging.info(
+                        "Caching {} chars at key {}".format(len(cache_value), cache_key)
+                    )
+
+                    stats_logger.incr("set_cache_key")
+                    cache.set(cache_key, cache_value, timeout=self.cache_timeout)
+                except Exception as e:
+                    # cache.set call can fail if the backend is down or if
+                    # the key is too large or whatever other reasons
+                    logging.warning("Could not cache key {}".format(cache_key))
+                    logging.exception(e)
+                    cache.delete(cache_key)
+        return {
+            "cache_key": self._any_cache_key,
+            "cached_dttm": self._any_cached_dttm,
+            "cache_timeout": self.cache_timeout,
+            "dfs": dfs,
+            "error": self.error_message,
+            "form_data": self.form_data,
+            "is_cached": self._any_cache_key is not None,
+            "query": self.query,
+            "status": self.status,
+            "stacktrace": stacktrace,
+            "rowscount": [len(df.index) for df in dfs.values()],
+        }
+
+    @property
+    def data(self):  # TODO
+        """This is the data object serialized to the js layer"""
+        content = {
+            "form_data": self.form_data,
+            "token": self.token,
+            "viz_name": self.viz_type,
+            "filter_select_enabled": self.datasource.filter_select_enabled,
+        }
+        return content
+
+    def get_csv(self):  # TODO
+        df = self.get_df()
+        include_index = not isinstance(df.index, pd.RangeIndex)
+        return df.to_csv(index=include_index, **config.get("CSV_EXPORT"))
+
+    def get_data(self, dfs):
+        return {datasource: df.to_dict(orient="records") for datasource, df in dfs.items()}
+
 
 class TableViz(BaseViz):
 
@@ -1460,6 +1744,43 @@ class DistributionPieViz(NVD3Viz):
         df = df.reset_index()
         df.columns = ["x", "y"]
         return df.to_dict(orient="records")
+
+
+class MultipleDatasourcePieViz(DistributionPieViz, MulitpleDatasourceViz):
+
+    """Annoy visualization snobs with this controversial pie chart"""
+
+    viz_type = "multi_source_pie"
+    verbose_name = _("Distribution - NVD3 - Pie Chart - Multiple Datasource")
+    is_timeseries = False
+
+    def query_obj(self):
+        d = super().query_obj()
+        metric = self.form_data.get("metric")
+        if not metric:
+            raise Exception(_("Pick a metric!"))
+        d["metrics"] = [self.form_data.get("metric")]
+        self.form_data["metric"] = metric
+
+        # Limiting rows is not required as only one cell is returned
+        d["row_limit"] = None
+        return d
+
+    def get_data(self, dfs):
+        if not all(df.shape == (1, 1) for df in dfs.values()):
+            raise Exception("All datasources must return a scalar")
+
+        aggregated_df = pd.DataFrame(columns=["x", "y"])
+
+        for datasource, df in dfs.items():
+            metric = self.metric_labels[0]
+            df = dfs.pivot_table(values=[metric], dropna=False)
+            df.sort_values(by=metric, ascending=False, inplace=True)
+            df = df.reset_index()
+
+            aggregated_df.append({"x": datasource, "y": df.at[0, metric]})
+
+        return aggregated_df.to_dict(orient="records")
 
 
 class HistogramViz(BaseViz):
