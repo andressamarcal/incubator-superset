@@ -19,7 +19,8 @@
     "lint-fix": "eslint --fix --ignore-path=.eslintignore --ext .js,.jsx . && tslint -c tslint.json --fix ./{src,spec}/**/*.ts{,x}",
     "cypress": "cypress",
     "cypress-debug": "cypress open --config watchForFileChanges=true",
-    "install-cypress": "npm install cypress@3.1.5"
+    "install-cypress": "npm install cypress@3.1.5",
+    "postinstall": "patch-package"
   },
   "repository": {
     "type": "git",
@@ -105,6 +106,7 @@
     "mousetrap": "^1.6.1",
     "mustache": "^2.2.1",
     "omnibar": "^2.1.1",
+    "patch-package": "^6.1.2",
     "prop-types": "^15.6.0",
     "re-resizable": "^4.3.1",
     "react": "^16.8.6",
