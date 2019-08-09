@@ -38,6 +38,7 @@ export default class AddSliceContainer extends React.PureComponent {
     super(props);
     this.state = {
       visType: 'table',
+      supportsMultiDatasource: false,
     };
 
     this.changeDatasource = this.changeDatasource.bind(this);
@@ -59,18 +60,34 @@ export default class AddSliceContainer extends React.PureComponent {
   }
 
   changeDatasource(e) {
+    if (this.state.supportsMultiDatasource) {
+      this.setState({
+        datasourceValue: e.map(datasource => datasource.value),
+        datasourceId: e.map(datasource => datasource.value.split('__')[0]),
+        datasourceType: e.map(datasource => datasource.value.split('__')[1]),
+      });
+    }
+    else {
+      this.setState({
+        datasourceValue: e.value,
+        datasourceId: e.value.split('__')[0],
+        datasourceType: e.value.split('__')[1],
+      });
+    }
+  }
+
+  changeVisType(visType, supportsMultiDatasource) {
     this.setState({
-      datasourceValue: e.value,
-      datasourceId: e.value.split('__')[0],
-      datasourceType: e.value.split('__')[1],
+      visType,
+      supportsMultiDatasource,
     });
   }
 
-  changeVisType(visType) {
-    this.setState({ visType });
-  }
-
   isBtnDisabled() {
+    if (this.state.supportsMultiDatasource) {
+      const dsId = this.state.datasourceId;
+      return !(dsId && dsId.length > 0 && this.state.visType);
+    }
     return !(this.state.datasourceId && this.state.visType);
   }
 
@@ -91,6 +108,7 @@ export default class AddSliceContainer extends React.PureComponent {
                 style={styleSelectWidth}
                 value={this.state.datasourceValue}
                 width={600}
+                multi={this.state.supportsMultiDatasource}
               />
             </div>
             <p className="text-muted">

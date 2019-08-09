@@ -71,8 +71,8 @@ export default class VizTypeControl extends React.PureComponent {
     this.focusSearch = this.focusSearch.bind(this);
   }
 
-  onChange(vizType) {
-    this.props.onChange(vizType);
+  onChange(vizType, supportsMultiDatasource) {
+    this.props.onChange(vizType, supportsMultiDatasource);
     this.setState({ showModal: false });
   }
 
@@ -102,7 +102,7 @@ export default class VizTypeControl extends React.PureComponent {
     return (
       <div
         className={`viztype-selector-container ${isSelected ? 'selected' : ''}`}
-        onClick={this.onChange.bind(this, key)}
+        onClick={this.onChange.bind(this, key, type.supportsMultiDatasource)}
       >
         <img
           alt={type.name}
