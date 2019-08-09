@@ -32,16 +32,19 @@ const propTypes = {
 };
 
 const styleSelectWidth = { width: 600 };
+const multiDatasourceLabelStyle = { marginLeft: 5 };
 
 export default class AddSliceContainer extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
       visType: 'table',
+      multipleDatasource: false,
       supportsMultiDatasource: false,
     };
 
     this.changeDatasource = this.changeDatasource.bind(this);
+    this.onChangeMultipleDatasource = this.onChangeMultipleDatasource.bind(this);
     this.changeVisType = this.changeVisType.bind(this);
     this.gotoSlice = this.gotoSlice.bind(this);
   }
@@ -60,7 +63,7 @@ export default class AddSliceContainer extends React.PureComponent {
   }
 
   changeDatasource(e) {
-    if (this.state.supportsMultiDatasource) {
+    if (this.state.multipleDatasource) {
       this.setState({
         datasourceValue: e.map(datasource => datasource.value),
         datasourceId: e.map(datasource => datasource.value.split('__')[0]),
@@ -76,15 +79,40 @@ export default class AddSliceContainer extends React.PureComponent {
     }
   }
 
+  onChangeMultipleDatasource(e) {
+    const multipleDatasource = e.target.checked;
+
+    if (!multipleDatasource) {
+      this.setState({
+        datasourceValue: undefined,
+        datasourceId: undefined,
+        datasourceType: undefined,
+      });
+    }
+
+    this.setState({
+      multipleDatasource
+    });
+  }
+
   changeVisType(visType, supportsMultiDatasource) {
     this.setState({
       visType,
       supportsMultiDatasource,
     });
+
+    if (!supportsMultiDatasource) {
+      this.setState({
+        multipleDatasource: false,
+        datasourceValue: undefined,
+        datasourceId: undefined,
+        datasourceType: undefined,
+      });
+    }
   }
 
   isBtnDisabled() {
-    if (this.state.supportsMultiDatasource) {
+    if (this.state.multipleDatasource) {
       const dsId = this.state.datasourceId;
       return !(dsId && dsId.length > 0 && this.state.visType);
     }
@@ -108,7 +136,7 @@ export default class AddSliceContainer extends React.PureComponent {
                 style={styleSelectWidth}
                 value={this.state.datasourceValue}
                 width={600}
-                multi={this.state.supportsMultiDatasource}
+                multi={this.state.multipleDatasource}
               />
             </div>
             <p className="text-muted">
@@ -118,6 +146,22 @@ export default class AddSliceContainer extends React.PureComponent {
                 'follow the instructions on the how to add it on the ')}
               <a href="https://superset.apache.org/tutorial.html">{t('Superset tutorial')}</a>
             </p>
+            {this.state.supportsMultiDatasource && (
+              <div>
+                <input
+                  type="checkbox"
+                  id="multiDatasource"
+                  onChange={this.onChangeMultipleDatasource}
+                  checked={this.state.multipleDatasource}
+                />
+                <label
+                  htmlFor="multiDatasource"
+                  style={multiDatasourceLabelStyle}
+                >
+                  Multiple datasource slice
+                </label>
+              </div>
+            )}
           </div>
           <br />
           <div>
