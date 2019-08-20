@@ -53,35 +53,63 @@ const defaultProps = {
 class DatasourceControl extends React.PureComponent {
   constructor(props) {
     super(props);
-    this.state = {
-      showEditDatasourceModal: false,
-      showChangeDatasourceModal: false,
-      menuExpanded: false,
-    };
+
+    if (Array.isArray(this.props.datasource)) {
+      const datasource_count = this.props.datasource.length;
+      this.state = {
+        showEditDatasourceModal: Array(datasource_count).fill(false),
+        showChangeDatasourceModal: Array(datasource_count).fill(false),
+        menuExpanded: Array(datasource_count).fill(false),
+        showDatasource: Array(datasource_count).fill(false),
+      };
+    }
+    else {
+      this.state = {
+        showEditDatasourceModal: false,
+        showChangeDatasourceModal: false,
+        menuExpanded: false,
+        showDatasource: false,
+      };
+    }
+
+    this.toggleVariable = this.toggleVariable.bind(this);
     this.toggleChangeDatasourceModal = this.toggleChangeDatasourceModal.bind(this);
     this.toggleEditDatasourceModal = this.toggleEditDatasourceModal.bind(this);
     this.toggleShowDatasource = this.toggleShowDatasource.bind(this);
     this.renderDatasource = this.renderDatasource.bind(this);
+    this.renderDatasourceLayout = this.renderDatasourceLayout.bind(this);
+    this.renderDatasources = this.renderDatasources.bind(this);
   }
 
-  toggleShowDatasource() {
-    this.setState(({ showDatasource }) => ({ showDatasource: !showDatasource }));
+  /**
+   * Function used to reduce some code duplication
+   *  on the three function under
+   */
+  toggleVariable(variable, datasource_idx) {
+    return datasource_idx ?
+      variable.map( (val, idx) => idx == datasource_idx ? !val : val) :
+      !variable;
   }
 
-  toggleChangeDatasourceModal() {
+  toggleShowDatasource(datasource_idx) {
+    this.setState(({ showDatasource }) => ({
+      showDatasource : this.toggleVariable(showDatasource, datasource_idx),
+    }));
+  }
+
+  toggleChangeDatasourceModal(datasource_idx) {
     this.setState(({ showChangeDatasourceModal }) => ({
-      showChangeDatasourceModal: !showChangeDatasourceModal,
+      showChangeDatasourceModal: this.toggleVariable(showChangeDatasourceModal, datasource_idx),
     }));
   }
 
-  toggleEditDatasourceModal() {
+  toggleEditDatasourceModal(datasource_idx) {
     this.setState(({ showEditDatasourceModal }) => ({
-      showEditDatasourceModal: !showEditDatasourceModal,
+      showEditDatasourceModal: this.toggleVariable(showEditDatasourceModal, datasource_idx),
     }));
   }
 
-  renderDatasource() {
-    const datasource = this.props.datasource;
+  renderDatasource(datasource) {
     return (
       <div className="m-t-10">
         <Well className="m-t-0">
@@ -114,12 +142,24 @@ class DatasourceControl extends React.PureComponent {
     );
   }
 
-  render() {
-    const { menuExpanded, showChangeDatasourceModal, showEditDatasourceModal } = this.state;
-    const { datasource, onChange, onDatasourceSave, value } = this.props;
+  renderDatasourceLayout(datasource_idx) {
+    let { showDatasource, menuExpanded, showChangeDatasourceModal, showEditDatasourceModal } = this.state;
+    let { datasource, onChange, onDatasourceSave, value } = this.props;
+
+    if (datasource_idx) {
+      showDatasource = this.state.showDatasource[datasource_idx];
+      menuExpanded = this.state.menuExpanded[datasource_idx];
+      showChangeDatasourceModal = this.state.showChangeDatasourceModal[datasource_idx];
+      showEditDatasourceModal = this.state.showEditDatasourceModal[datasource_idx];
+
+      datasource = this.props.datasource[datasource_idx];
+      onChange = this.props.onChange[datasource_idx];
+      onDatasourceSave = this.props.onDatasourceSave[datasource_idx];
+      value = this.props.value[datasource_idx];
+    }
+
     return (
-      <div>
-        <ControlHeader {...this.props} />
+      <React.Fragment>
         <div className="btn-group label-dropdown">
           <OverlayTrigger
             placement="right"
@@ -128,7 +168,7 @@ class DatasourceControl extends React.PureComponent {
             }
           >
             <div className="btn-group">
-              <Label onClick={this.toggleEditDatasourceModal} className="label-btn-label">
+              <Label onClick={() => this.toggleEditDatasourceModal(datasource_idx)} className="label-btn-label">
                 {datasource.name}
               </Label>
             </div>
@@ -145,7 +185,7 @@ class DatasourceControl extends React.PureComponent {
           >
             <MenuItem
               eventKey="3"
-              onClick={this.toggleEditDatasourceModal}
+              onClick={() => this.toggleEditDatasourceModal(datasource_idx)}
             >
               {t('Edit Datasource')}
             </MenuItem>
@@ -160,7 +200,7 @@ class DatasourceControl extends React.PureComponent {
               </MenuItem>}
             <MenuItem
               eventKey="3"
-              onClick={this.toggleChangeDatasourceModal}
+              onClick={() => this.toggleChangeDatasourceModal(datasource_idx)}
             >
               {t('Change Datasource')}
             </MenuItem>
@@ -175,25 +215,54 @@ class DatasourceControl extends React.PureComponent {
           >
             <a href="#">
               <i
-                className={`fa fa-${this.state.showDatasource ? 'minus' : 'plus'}-square m-r-5 m-l-5 m-t-4`}
-                onClick={this.toggleShowDatasource}
+                className={`fa fa-${showDatasource ? 'minus' : 'plus'}-square m-r-5 m-l-5 m-t-4`}
+                onClick={() => this.toggleShowDatasource(datasource_idx)}
               />
             </a>
           </OverlayTrigger>
         </div>
-        <Collapse in={this.state.showDatasource}>{this.renderDatasource()}</Collapse>
+        <Collapse in={showDatasource}>{this.renderDatasource(datasource)}</Collapse>
         <DatasourceModal
           datasource={datasource}
           show={showEditDatasourceModal}
           onDatasourceSave={onDatasourceSave}
-          onHide={this.toggleEditDatasourceModal}
+          onHide={() => this.toggleEditDatasourceModal(datasource_idx)}
         />
         <ChangeDatasourceModal
           onDatasourceSave={onDatasourceSave}
-          onHide={this.toggleChangeDatasourceModal}
+          onHide={() => this.toggleChangeDatasourceModal(datasource_idx)}
           show={showChangeDatasourceModal}
           onChange={onChange}
         />
+      </React.Fragment>
+    );
+  }
+
+  renderDatasources(datasource_idx) {
+    return (
+      <Col md={4}>
+        {this.renderDatasourceLayout(datasource_idx)}
+      </Col>
+    );
+  }
+
+  render() {
+    let datasource_render;
+    if (Array.isArray(this.props.datasource)) {
+      datasource_render = (
+        <Row>
+          {_.range(this.props.datasource.length).map(this.renderDatasources)}
+        </Row>
+      )
+    }
+    else {
+      datasource_render = this.renderDatasourceLayout();
+    }
+
+    return (
+      <div>
+        <ControlHeader {...this.props} />
+        {datasource_render}
       </div>
     );
   }
