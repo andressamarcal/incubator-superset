@@ -118,6 +118,24 @@ const sortAxisChoices = [
   ['value_desc', 'sum(value) descending'],
 ];
 
+const mergeColumns = (datasources, fieldToFilter) => {
+  return datasources.reduce((ds1, ds2) => {
+    const columns = [];
+    let ds2_columns = ds2.filter(fieldToFilter);
+    for (const c1 of ds1.columns.filter(fieldToFilter)) {
+
+      const prev_length = ds2_columns.length;
+      ds2_columns = ds2_columns.filter(c => c.column != c1.column && c.type != c1.type && c.expression != c1.expression)
+      const pos_length = ds2_columns.length;
+
+      if (prev_length != pos_length) {
+        columns.push(c1)
+      }
+    }
+    return columns;
+  });
+}
+
 const groupByControl = {
   type: 'SelectControl',
   multi: true,
@@ -137,8 +155,15 @@ const groupByControl = {
   promptTextCreator: label => label,
   mapStateToProps: (state, control) => {
     const newState = {};
-    if (state.datasource) {
-      newState.options = state.datasource.columns.filter(c => c.groupby);
+    const ds = state.datasource;
+    if (ds) {
+      if (Array.isArray(ds)) {
+        newState.options = mergeColumns(ds, c => c.groupby);
+      }
+      else {
+        newState.options = ds.columns.filter(c => c.groupby);
+      }
+
       if (control && control.includeTime) {
         newState.options.push(timeColumnOption);
       }
@@ -158,12 +183,24 @@ const metrics = {
     return metric ? [metric] : null;
   },
   mapStateToProps: (state) => {
-    const datasource = state.datasource;
-    return {
-      columns: datasource ? datasource.columns : [],
-      savedMetrics: datasource ? datasource.metrics : [],
-      datasourceType: datasource && datasource.type,
-    };
+    const ds = state.datasource;
+    let props = {};
+    if (ds && Array.isArray(ds)) {
+      props = {
+        columns: mergeColumns(ds, c => true),  // TODO
+        savedMetrics: datasource.metrics,
+        datasourceType: ds.map(d => d.type),
+      };
+    }
+    else {
+      props = {
+        columns: ds ? ds.columns : [],
+        savedMetrics: ds ? ds.metrics : [],
+        datasourceType: ds && ds.type,
+      };
+    }
+
+    return props;
   },
   description: t('One or many metrics to display'),
 };
@@ -912,13 +949,24 @@ export const controls = {
     valueKey: 'column_name',
     mapStateToProps: (state) => {
       const props = {};
-      if (state.datasource) {
-        props.options = state.datasource.columns.filter(c => c.is_dttm);
-        props.default = null;
-        if (state.datasource.main_dttm_col) {
-          props.default = state.datasource.main_dttm_col;
-        } else if (props.options && props.options.length > 0) {
-          props.default = props.options[0].column_name;
+      const ds = state.datasource;
+      if (ds) {
+        if (Array.isArray(ds)) {
+          props.options = mergeColumns(ds, c => c.is_dttm);
+
+          props.default = null;
+          if (props.options && props.options.length > 0) {
+            props.default = props.options[0].column_name;
+          }
+        }
+        else {
+          props.options = state.datasource.columns.filter(c => c.is_dttm);
+          props.default = null;
+          if (state.datasource.main_dttm_col) {
+            props.default = state.datasource.main_dttm_col;
+          } else if (props.options && props.options.length > 0) {
+            props.default = props.options[0].column_name;
+          }
         }
       }
       return props;
@@ -961,7 +1009,7 @@ export const controls = {
     type: 'DateFilterControl',
     freeForm: true,
     label: t('Time range'),
-    default: t('Last week'),
+    default: t('No Filter'),
   },
 
   max_bubble_size: {
