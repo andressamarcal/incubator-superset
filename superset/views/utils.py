@@ -84,9 +84,21 @@ def get_viz(
         return slc.get_viz()
     else:
         viz_type = form_data.get("viz_type", "table")
-        datasource = ConnectorRegistry.get_datasource(
-            datasource_type, datasource_id, db.session
-        )
+        if isinstance(datasource_id, list):
+            datasource = []
+            for i in range(len(datasource_id)):
+                ds_id = datasource_id[i]
+                ds_type = datasource_type[i]
+
+                datasource.append(
+                    ConnectorRegistry.get_datasource(
+                        ds_type, ds_id, db.session
+                    )
+                )
+        else:
+            datasource = ConnectorRegistry.get_datasource(
+                    datasource_type, datasource_id, db.session
+                )
         viz_obj = viz.viz_types[viz_type](datasource, form_data=form_data, force=force)
         return viz_obj
 
@@ -139,11 +151,28 @@ def get_form_data(slice_id=None, use_slice_data=False):
     return form_data, slc
 
 
+def _process_datasource(datasource, datasource_id=None, datasource_type=None):
+    if "__" in datasource:
+        datasource_id, datasource_type = datasource.split("__")
+        # The case where the datasource has been deleted
+        if datasource_id == "None":
+            datasource_id = None
+
+    if not datasource_id:
+        raise SupersetException(
+            "The datasource associated with this chart no longer exists"
+        )
+
+    datasource_id = int(datasource_id)
+
+    return datasource_id, datasource_type
+
+
 def get_datasource_info(
     datasource_id: Optional[int],
     datasource_type: Optional[str],
     form_data: Dict[str, Any],
-) -> Tuple[int, Optional[str]]:
+) -> Tuple[Any, Optional[str]]:
     """
     Compatibility layer for handling of datasource info
 
@@ -161,19 +190,19 @@ def get_datasource_info(
 
     datasource = form_data.get("datasource", "")
 
-    if "__" in datasource:
-        datasource_id, datasource_type = datasource.split("__")
-        # The case where the datasource has been deleted
-        if datasource_id == "None":
-            datasource_id = None
+    import logging
+    if isinstance(datasource, list):
+        ds_ids = []
+        ds_types = []
+        for ds in datasource:
+            ds_id, ds_type = _process_datasource(ds)
 
-    if not datasource_id:
-        raise SupersetException(
-            "The datasource associated with this chart no longer exists"
-        )
+            ds_ids.append(ds_id)
+            ds_types.append(ds_type)
 
-    datasource_id = int(datasource_id)
-    return datasource_id, datasource_type
+        return ds_ids, ds_types
+
+    return _process_datasource(datasource, datasource_id, datasource_type)
 
 
 def apply_display_max_row_limit(sql_results: Dict[str, Any]) -> Dict[str, Any]:

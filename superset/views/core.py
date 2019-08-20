@@ -44,6 +44,7 @@ import pandas as pd
 import simplejson as json
 from sqlalchemy import and_, or_, select
 from werkzeug.routing import BaseConverter
+from werkzeug import wrappers
 
 from superset import (
     app,
@@ -975,17 +976,40 @@ class Superset(BaseSupersetView):
         try:
             query_obj = viz_obj.query_obj()
             if query_obj:
-                query = viz_obj.datasource.get_query_str(query_obj)
+                if isinstance(viz_obj.datasource, list):
+                    query = [ds.get_query_str(query_obj) for ds in viz_obj.datasource]
+                else:
+                    query = viz_obj.datasource.get_query_str(query_obj)
         except Exception as e:
             logging.exception(e)
             return json_error_response(e)
 
         if not query:
-            query = "No query."
+            if isinstance(viz_obj.datasource, list):
+                query = ["No query." for ___ in viz_obj.datasource]
+            else:
+                query = "No query."
 
-        return self.json_response(
-            {"query": query, "language": viz_obj.datasource.query_language}
-        )
+        if isinstance(viz_obj.datasource, list):
+            response = {
+                "query"          : query,
+                "language"       : [],
+                "datasource_id"  : [],
+                "datasource_type": [],
+                "datasource_name": [],
+            }
+
+            for ds in viz_obj.datasource:
+                response["language"].append(ds.query_language)
+                response["datasource_id"].append(ds.id)
+                response["datasource_type"].append(ds.type)
+                response["datasource_name"].append(ds.name)
+
+            return self.json_response(response)
+        else:
+            return self.json_response(
+                {"query": query, "language": viz_obj.datasource.query_language}
+            )
 
     def get_raw_results(self, viz_obj):
         return self.json_response(
@@ -1141,6 +1165,30 @@ class Superset(BaseSupersetView):
             )
         )
 
+    @staticmethod
+    def _get_datasource(datasource_type, datasource_id, session):
+        datasource = ConnectorRegistry.get_datasource(
+            datasource_type, datasource_id, session
+        )
+        if not datasource:
+            flash(DATASOURCE_MISSING_ERR, "danger")
+            return redirect("/chart/list")
+
+        if config.get("ENABLE_ACCESS_REQUEST") and (
+                not security_manager.datasource_access(datasource)
+        ):
+            flash(
+                __(security_manager.get_datasource_access_error_msg(datasource)),
+                "danger",
+            )
+            return redirect(
+                "superset/request_access/?"
+                f"datasource_type={datasource_type}&"
+                f"datasource_id={datasource_id}&"
+            )
+
+        return datasource
+
     @event_logger.log_this
     @has_access
     @expose("/explore/<datasource_type>/<datasource_id>/", methods=["GET", "POST"])
@@ -1157,28 +1205,35 @@ class Superset(BaseSupersetView):
         except SupersetException:
             return redirect(error_redirect)
 
-        datasource = ConnectorRegistry.get_datasource(
-            datasource_type, datasource_id, db.session
-        )
-        if not datasource:
-            flash(DATASOURCE_MISSING_ERR, "danger")
-            return redirect(error_redirect)
+        if isinstance(datasource_id, list):
+            datasource = []
+            for i in range(len(datasource_id)):
+                ds_id = datasource_id[i]
+                ds_type = datasource_type[i]
 
-        if config.get("ENABLE_ACCESS_REQUEST") and (
-            not security_manager.datasource_access(datasource)
-        ):
-            flash(
-                __(security_manager.get_datasource_access_error_msg(datasource)),
-                "danger",
-            )
-            return redirect(
-                "superset/request_access/?"
-                f"datasource_type={datasource_type}&"
-                f"datasource_id={datasource_id}&"
-            )
+                ds = self._get_datasource(ds_type, ds_id, db.session)
+
+                if isinstance(ds, wrappers.Response):
+                    return ds
+
+                datasource.append(ds)
+
+            datasources_reprs = []
+            for i in range(len(datasource_id)):
+                ds_id = datasource_id[i]
+                ds_type = datasource_type[i]
+
+                datasources_reprs.append(f"{ds_id}__{ds_type}")
+            form_data["datasource"] = datasources_reprs
+        else:
+            datasource = self._get_datasource(datasource_type, datasource_id, db.session)
+            if isinstance(datasource, wrappers.Response):
+                return datasource
+
+            form_data["datasource"] = f"{datasource_id}__{datasource_type}"
 
         viz_type = form_data.get("viz_type")
-        if not viz_type and datasource.default_endpoint:
+        if not viz_type and not isinstance(datasource, list) and datasource.default_endpoint:
             return redirect(datasource.default_endpoint)
 
         # slc perms
@@ -1187,8 +1242,6 @@ class Superset(BaseSupersetView):
         slice_download_perm = security_manager.can_access(
             "can_download", "SliceModelView"
         )
-
-        form_data["datasource"] = str(datasource_id) + "__" + datasource_type
 
         # On explore, merge legacy and extra filters into the form data
         utils.convert_legacy_filters_into_adhoc(form_data)
@@ -1222,7 +1275,7 @@ class Superset(BaseSupersetView):
                 slice_download_perm,
                 datasource_id,
                 datasource_type,
-                datasource.name,
+                [ds.name for ds in datasource] if isinstance(datasource, list) else datasource.name,
             )
 
         standalone = request.args.get("standalone") == "true"
@@ -1230,7 +1283,7 @@ class Superset(BaseSupersetView):
             "can_add": slice_add_perm,
             "can_download": slice_download_perm,
             "can_overwrite": slice_overwrite_perm,
-            "datasource": datasource.data,
+            "datasource": [ds.data for ds in datasource] if isinstance(datasource, list) else datasource.data,
             "form_data": form_data,
             "datasource_id": datasource_id,
             "datasource_type": datasource_type,
@@ -1240,15 +1293,19 @@ class Superset(BaseSupersetView):
             "forced_height": request.args.get("height"),
             "common": self.common_bootstrap_payload(),
         }
-        table_name = (
-            datasource.table_name
-            if datasource_type == "table"
-            else datasource.datasource_name
-        )
         if slc:
             title = slc.slice_name
-        else:
+        elif not isinstance(datasource, list):
+            table_name = (
+                datasource.table_name
+                if datasource_type == "table"
+                else datasource.datasource_name
+            )
             title = _("Explore - %(table)s", table=table_name)
+        else:
+            title = "Multi datasource explore"
+
+        logging.warning(bootstrap_data)
         return self.render_template(
             "superset/basic.html",
             bootstrap_data=json.dumps(bootstrap_data),
@@ -1257,10 +1314,27 @@ class Superset(BaseSupersetView):
             standalone_mode=standalone,
         )
 
+    @staticmethod
+    def _get_datasource_column_values(datasource_type, datasource_id, column):
+        # TODO: Cache endpoint by user, datasource and column
+        datasource = ConnectorRegistry.get_datasource(
+            datasource_type, datasource_id, db.session
+        )
+
+        if not datasource:
+            return json_error_response(DATASOURCE_MISSING_ERR)
+
+        security_manager.assert_datasource_permission(datasource)
+
+        return datasource.values_for_column(
+            column, config.get("FILTER_SELECT_ROW_LIMIT", 10000)
+        )
+
     @api
     @handle_api_exception
     @has_access_api
     @expose("/filter/<datasource_type>/<datasource_id>/<column>/")
+    @expose("/filter/<column>/")
     def filter(self, datasource_type, datasource_id, column):
         """
         Endpoint to retrieve values for specified column.
@@ -1270,19 +1344,34 @@ class Superset(BaseSupersetView):
         :param column: Column name to retrieve values for
         :return:
         """
-        # TODO: Cache endpoint by user, datasource and column
-        datasource = ConnectorRegistry.get_datasource(
-            datasource_type, datasource_id, db.session
-        )
-        if not datasource:
-            return json_error_response(DATASOURCE_MISSING_ERR)
-        security_manager.assert_datasource_permission(datasource)
+
+        if not datasource_type and not datasource_id:
+            datasources = request.args.get("datasources")
+            if not datasources:
+                json_error_response(DATASOURCE_MISSING_ERR)
+
+            datasources = json.loads(datasources)
+
+            payload = []
+            for ds_id, ds_type in datasources:
+                values = self._get_datasource_column_values(ds_type, ds_id, column)
+
+                if isinstance(values, Response):
+                    return values
+
+                payload += values
+
+        else:
+            payload = self._get_datasource_column_values(datasource_type, datasource_id, column)
+
+            if isinstance(payload, Response):
+                return payload
+
         payload = json.dumps(
-            datasource.values_for_column(
-                column, config.get("FILTER_SELECT_ROW_LIMIT", 10000)
-            ),
+            payload,
             default=utils.json_int_dttm_ser,
         )
+
         return json_success(payload)
 
     def save_or_overwrite_slice(
