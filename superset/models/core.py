@@ -19,6 +19,7 @@
 from contextlib import closing
 from copy import copy, deepcopy
 from datetime import datetime
+from functools import reduce
 import json
 import logging
 import textwrap
@@ -69,15 +70,6 @@ log_query = config.get("QUERY_LOGGER")
 metadata = Model.metadata  # pylint: disable=no-member
 
 PASSWORD_MASK = "X" * 10
-
-
-def set_related_perm(mapper, connection, target):  # noqa
-    src_class = target.cls_model
-    id_ = target.datasource_id
-    if id_:
-        ds = db.session.query(src_class).filter_by(id=int(id_)).first()
-        if ds:
-            target.perm = ds.perm
 
 
 def copy_dashboard(mapper, connection, target):
@@ -150,6 +142,13 @@ slice_user = Table(
 )
 
 
+class SlicePerms(Model, AuditMixinNullable):
+    __tablename__ = "slice_perms"
+    id = Column(Integer, primary_key=True)
+    slice_id = Column(Integer, ForeignKey("slices.id"))
+    perm = Column(String(1000))
+
+
 class Slice(Model, AuditMixinNullable, ImportMixin):
 
     """A slice is essentially a report or a view on data"""
@@ -157,20 +156,17 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
     __tablename__ = "slices"
     id = Column(Integer, primary_key=True)
     slice_name = Column(String(250))
-    datasource_id = Column(Integer)
     datasource_type = Column(String(200))
-    datasource_name = Column(String(2000))
     viz_type = Column(String(250))
     params = Column(Text)
     description = Column(Text)
     cache_timeout = Column(Integer)
-    perm = Column(String(1000))
+    perms = relationship(SlicePerms)
     owners = relationship(security_manager.user_model, secondary=slice_user)
 
     export_fields = (
         "slice_name",
         "datasource_type",
-        "datasource_name",
         "viz_type",
         "params",
         "cache_timeout",
@@ -180,19 +176,15 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
         return self.slice_name or str(self.id)
 
     @property
-    def cls_model(self):
-        return ConnectorRegistry.sources[self.datasource_type]
-
-    @property
     def datasource(self):
         return self.get_datasource
 
-    def clone(self):
+    def clone(self):  # TODO with changes for multiple datasources might not work
         return Slice(
             slice_name=self.slice_name,
-            datasource_id=self.datasource_id,
             datasource_type=self.datasource_type,
-            datasource_name=self.datasource_name,
+            table_datasources=self.table_datasources,
+            druid_datasources=self.druid_datasources,
             viz_type=self.viz_type,
             params=self.params,
             description=self.description,
@@ -202,24 +194,23 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
     @datasource.getter  # type: ignore
     @utils.memoized
     def get_datasource(self):
-        return db.session.query(self.cls_model).filter_by(id=self.datasource_id).first()
+        return getattr(self, f"{self.datasource_type}_datasources")
 
-    @renders("datasource_name")
     def datasource_link(self):
         # pylint: disable=no-member
         datasource = self.datasource
-        return datasource.link if datasource else None
-
-    def datasource_name_text(self):
-        # pylint: disable=no-member
-        datasource = self.datasource
-        return datasource.name if datasource else None
+        if not datasource:
+            return escape("")
+        return reduce(lambda l1, l2: l1 + escape(", ") + l2, [ds.link for ds in datasource])
 
     @property
-    def datasource_edit_url(self):
+    def datasource_edit_url(self):  # TODO with changes for multiple datasources might not work properly
         # pylint: disable=no-member
-        datasource = self.datasource
-        return datasource.url if datasource else None
+        return [ds.url for ds in self.datasource]
+
+    @property
+    def multi_datasource(self):
+        return "multi" in self.viz_type
 
     @property  # type: ignore
     @utils.memoized
@@ -245,7 +236,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
             logging.exception(e)
             d["error"] = str(e)
         return {
-            "datasource": self.datasource_name,
+            "datasource": [ds.name for ds in self.datasource],
             "description": self.description,
             "description_markeddown": self.description_markeddown,
             "edit_url": self.edit_url,
@@ -274,7 +265,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
             {
                 "slice_id": self.id,
                 "viz_type": self.viz_type,
-                "datasource": "{}__{}".format(self.datasource_id, self.datasource_type),
+                "datasource": [f"{ds.id}__{ds.type}" for ds in self.datasource],
             }
         )
 
@@ -344,6 +335,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
 
     @classmethod
     def import_obj(cls, slc_to_import, slc_to_override, import_time=None):
+        # TODO with changes for multiple datasources might not work
         """Inserts or overrides slc in the database.
 
         remote_id and import_time fields in params_dict are set to track the
@@ -385,9 +377,39 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
             self.id
         )
 
+    @staticmethod
+    def set_perms_after_insert_update(mapper, connection, target):
+        Session = sessionmaker(autoflush=False)
+        session = Session(bind=connection)
 
-sqla.event.listen(Slice, "before_insert", set_related_perm)
-sqla.event.listen(Slice, "before_update", set_related_perm)
+        old_slice = session.query(Slice).filter_by(slice_name=target.slice_name).first()
+        if old_slice:
+            old_perms = session.query(SlicePerms).filter_by(slice_id=old_slice.id).all()
+            for perm in old_perms:
+                session.delete(perm)
+
+        slice_id = target.id
+        for ds in target.get_datasource:
+            session.add(SlicePerms(slice_id=slice_id, perm=ds.perm))
+
+        session.commit()
+
+    @staticmethod
+    def delete_perms_before_delete(mapper, connection, target):
+        Session = sessionmaker(autoflush=False)
+        session = Session(bind=connection)
+
+        perms_ids = [perm.id for perm in target.perms]
+
+        delete_q = SlicePerms.__table__.delete().where(SlicePerms.id.in_(perms_ids))
+        session.execute(delete_q)
+
+        session.commit()
+
+
+sqla.event.listen(Slice, "after_insert", Slice.set_perms_after_insert_update)
+sqla.event.listen(Slice, "after_update", Slice.set_perms_after_insert_update)
+sqla.event.listen(Slice, "before_delete", Slice.delete_perms_before_delete)
 
 
 dashboard_slices = Table(
