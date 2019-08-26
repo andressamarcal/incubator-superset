@@ -131,7 +131,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Region Filter",
             viz_type="filter_box",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="filter_box",
@@ -160,7 +160,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="World's Population",
             viz_type="big_number",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 since="2000",
@@ -174,7 +174,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Most Populated Countries",
             viz_type="table",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="table",
@@ -186,7 +186,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Growth Rate",
             viz_type="line",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="line",
@@ -200,7 +200,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="% Rural",
             viz_type="world_map",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="world_map",
@@ -212,7 +212,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Life Expectancy VS Rural %",
             viz_type="bubble",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="bubble",
@@ -253,7 +253,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Rural Breakdown",
             viz_type="sunburst",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="sunburst",
@@ -266,7 +266,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="World's Pop Growth",
             viz_type="area",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 since="1960-01-01",
@@ -279,7 +279,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Box plot",
             viz_type="box_plot",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 since="1960-01-01",
@@ -294,7 +294,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Treemap",
             viz_type="treemap",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 since="1960-01-01",
@@ -308,7 +308,7 @@ def load_world_bank_health_n_pop(only_metadata=False, force=False):
             slice_name="Parallel Coordinates",
             viz_type="para",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 since="2011-01-01",

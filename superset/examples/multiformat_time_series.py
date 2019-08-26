@@ -107,7 +107,7 @@ def load_multiformat_time_series(only_metadata=False, force=False):
             slice_name=f"Calendar Heatmap multiformat {i}",
             viz_type="cal_heatmap",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(slice_data),
         )
         merge_slice(slc)

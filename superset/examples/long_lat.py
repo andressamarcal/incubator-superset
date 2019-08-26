@@ -109,7 +109,7 @@ def load_long_lat_data(only_metadata=False, force=False):
         slice_name="Mapbox Long/Lat",
         viz_type="mapbox",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
     misc_dash_slices.add(slc.slice_name)

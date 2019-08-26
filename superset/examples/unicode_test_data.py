@@ -103,7 +103,7 @@ def load_unicode_test_data(only_metadata=False, force=False):
         slice_name="Unicode Cloud",
         viz_type="word_cloud",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)

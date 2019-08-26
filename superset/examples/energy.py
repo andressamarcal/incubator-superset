@@ -67,7 +67,7 @@ def load_energy(only_metadata=False, force=False):
         slice_name="Energy Sankey",
         viz_type="sankey",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=textwrap.dedent(
             """\
         {
@@ -93,7 +93,7 @@ def load_energy(only_metadata=False, force=False):
         slice_name="Energy Force Layout",
         viz_type="directed_force",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=textwrap.dedent(
             """\
         {
@@ -121,7 +121,7 @@ def load_energy(only_metadata=False, force=False):
         slice_name="Heatmap",
         viz_type="heatmap",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=textwrap.dedent(
             """\
         {

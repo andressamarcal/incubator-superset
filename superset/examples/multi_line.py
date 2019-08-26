@@ -18,7 +18,7 @@ import json
 
 from superset import db
 from .birth_names import load_birth_names
-from .helpers import merge_slice, misc_dash_slices, Slice
+from .helpers import merge_slice, misc_dash_slices, Slice, TBL
 from .world_bank import load_world_bank_health_n_pop
 
 
@@ -34,7 +34,7 @@ def load_multi_line(only_metadata=False):
 
     slc = Slice(
         datasource_type="table",  # not true, but needed
-        datasource_id=1,  # cannot be empty
+        table_datasources=[db.session.query(TBL).filter_by(table_name="energy_usage").first()],
         slice_name="Multi Line",
         viz_type="line_multi",
         params=json.dumps(

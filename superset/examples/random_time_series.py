@@ -72,7 +72,7 @@ def load_random_time_series_data(only_metadata=False, force=False):
         slice_name="Calendar Heatmap",
         viz_type="cal_heatmap",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)

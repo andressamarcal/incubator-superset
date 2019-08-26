@@ -137,7 +137,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Participants",
             viz_type="big_number",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="big_number",
@@ -150,14 +150,14 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Genders",
             viz_type="pie",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(defaults, viz_type="pie", groupby=["gender"]),
         ),
         Slice(
             slice_name="Trends",
             viz_type="line",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="line",
@@ -171,7 +171,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Genders by State",
             viz_type="dist_bar",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 adhoc_filters=[
@@ -208,7 +208,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Girls",
             viz_type="table",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 groupby=["name"],
@@ -221,7 +221,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Girl Name Cloud",
             viz_type="word_cloud",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="word_cloud",
@@ -237,7 +237,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Boys",
             viz_type="table",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 groupby=["name"],
@@ -249,7 +249,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Boy Name Cloud",
             viz_type="word_cloud",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="word_cloud",
@@ -265,7 +265,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Top 10 Girl Name Share",
             viz_type="area",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 adhoc_filters=[gen_filter("gender", "girl")],
@@ -282,7 +282,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Top 10 Boy Name Share",
             viz_type="area",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 adhoc_filters=[gen_filter("gender", "boy")],
@@ -301,7 +301,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Average and Sum Trends",
             viz_type="dual_line",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="dual_line",
@@ -320,14 +320,14 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Num Births Trend",
             viz_type="line",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(defaults, viz_type="line"),
         ),
         Slice(
             slice_name="Daily Totals",
             viz_type="table",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             created_by=admin,
             params=get_slice_json(
                 defaults,
@@ -341,7 +341,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Number of California Births",
             viz_type="big_number_total",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 metric={
@@ -361,7 +361,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Top 10 California Names Timeseries",
             viz_type="line",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 metrics=[
@@ -394,7 +394,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Names Sorted by Num in California",
             viz_type="table",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 groupby=["name"],
@@ -414,7 +414,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Number of Girls",
             viz_type="big_number_total",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults,
                 viz_type="big_number_total",
@@ -427,7 +427,7 @@ def load_birth_names(only_metadata=False, force=False):
             slice_name="Pivot Table",
             viz_type="pivot_table",
             datasource_type="table",
-            datasource_id=tbl.id,
+            table_datasources=[tbl],
             params=get_slice_json(
                 defaults, viz_type="pivot_table", groupby=["name"], columns=["state"]
             ),

@@ -202,7 +202,7 @@ def load_deck_dash():
         slice_name="Scatterplot",
         viz_type="deck_scatter",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)
@@ -240,7 +240,7 @@ def load_deck_dash():
         slice_name="Screen grid",
         viz_type="deck_screengrid",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)
@@ -279,7 +279,7 @@ def load_deck_dash():
         slice_name="Hexagons",
         viz_type="deck_hex",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)
@@ -318,7 +318,7 @@ def load_deck_dash():
         slice_name="Grid",
         viz_type="deck_grid",
         datasource_type="table",
-        datasource_id=tbl.id,
+        table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)
@@ -412,7 +412,7 @@ def load_deck_dash():
         slice_name="Polygons",
         viz_type="deck_polygon",
         datasource_type="table",
-        datasource_id=polygon_tbl.id,
+        table_datasources=[polygon_tbl],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)
@@ -465,7 +465,7 @@ def load_deck_dash():
         slice_name="Arcs",
         viz_type="deck_arc",
         datasource_type="table",
-        datasource_id=db.session.query(TBL).filter_by(table_name="flights").first().id,
+        table_datasources=[db.session.query(TBL).filter_by(table_name="flights").first()],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)
@@ -517,10 +517,7 @@ def load_deck_dash():
         slice_name="Path",
         viz_type="deck_path",
         datasource_type="table",
-        datasource_id=db.session.query(TBL)
-        .filter_by(table_name="bart_lines")
-        .first()
-        .id,
+        table_datasources=[db.session.query(TBL).filter_by(table_name="bart_lines").first()],
         params=get_slice_json(slice_data),
     )
     merge_slice(slc)
