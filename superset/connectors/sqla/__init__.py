@@ -15,4 +15,3 @@
 # specific language governing permissions and limitations
 # under the License.
 from . import models  # noqa
-from . import views  # noqa

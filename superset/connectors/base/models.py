@@ -18,13 +18,15 @@
 import json
 from typing import Any, List
 
-from sqlalchemy import and_, Boolean, Column, Integer, String, Text
+from flask_appbuilder import Model
+from sqlalchemy import Table, ForeignKey, Boolean, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import foreign, relationship
+from sqlalchemy.orm import relationship
 
-from superset.models.core import Slice
 from superset.models.helpers import AuditMixinNullable, ImportMixin
 from superset.utils import core as utils
+
+metadata = Model.metadata
 
 
 class BaseDatasource(AuditMixinNullable, ImportMixin):
@@ -65,12 +67,18 @@ class BaseDatasource(AuditMixinNullable, ImportMixin):
 
     @declared_attr
     def slices(self):
+        slices_datasource = Table(
+            f"slice__{self.type}_datasource",
+            metadata,
+            Column("id", Integer, primary_key=True),
+            Column("datasource_id", ForeignKey(f"{self.__tablename__}.id")),
+            Column("slice_id", ForeignKey("slices.id"))
+        )
+
         return relationship(
             "Slice",
-            primaryjoin=lambda: and_(
-                foreign(Slice.datasource_id) == self.id,
-                foreign(Slice.datasource_type) == self.type,
-            ),
+            secondary=slices_datasource,
+            backref=f"{self.type}_datasources",
         )
 
     # placeholder for a relationship to a derivative of BaseColumn

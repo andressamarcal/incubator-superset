@@ -16,7 +16,10 @@
 # under the License.
 from . import base  # noqa
 from . import api  # noqa
+from ..connectors.base import views  # noqa
+from ..connectors.sqla import views  # noqa
 from . import core  # noqa
+from ..connectors.druid import views  # noqa
 from . import sql_lab  # noqa
 from . import dashboard  # noqa
 from . import annotations  # noqa

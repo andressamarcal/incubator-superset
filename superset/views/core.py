@@ -299,15 +299,15 @@ class SliceModelView(SupersetModelView, DeleteMixin):  # noqa
     edit_title = _("Edit Chart")
 
     can_add = False
-    search_columns = (
+    search_columns = [
         "slice_name",
         "description",
-        "viz_type",
-        "datasource_name",
+        "viz_type",] + [
+        f"{source}_datasources" for source in ConnectorRegistry.sources.keys()] + [
         "owners",
-    )
+    ]
     list_columns = ["slice_link", "viz_type", "datasource_link", "creator", "modified"]
-    order_columns = ["viz_type", "datasource_link", "modified"]
+    order_columns = ["viz_type", "modified"]
     edit_columns = [
         "slice_name",
         "description",
@@ -341,7 +341,7 @@ class SliceModelView(SupersetModelView, DeleteMixin):  # noqa
         "cache_timeout": _("Cache Timeout"),
         "creator": _("Creator"),
         "dashboards": _("Dashboards"),
-        "datasource_link": _("Datasource"),
+        "datasource_link": _("Datasource(s)"),
         "description": _("Description"),
         "modified": _("Last Modified"),
         "owners": _("Owners"),
@@ -1305,7 +1305,6 @@ class Superset(BaseSupersetView):
         else:
             title = "Multi datasource explore"
 
-        logging.warning(bootstrap_data)
         return self.render_template(
             "superset/basic.html",
             bootstrap_data=json.dumps(bootstrap_data),

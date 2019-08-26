@@ -251,9 +251,9 @@ flask_app_mutator = app.config.get("FLASK_APP_MUTATOR")
 if flask_app_mutator:
     flask_app_mutator(app)
 
-from superset import views  # noqa
-
 # Registering sources
 module_datasource_map = app.config.get("DEFAULT_MODULE_DS_MAP")
 module_datasource_map.update(app.config.get("ADDITIONAL_MODULE_DS_MAP"))
 ConnectorRegistry.register_sources(module_datasource_map)
+
+from superset import views  # noqa
