@@ -63,12 +63,12 @@ def upgrade():
     sa.PrimaryKeyConstraint('id')
     )
 
-    #op.drop_column('slices', 'datasource_id')
-    #op.drop_column('slices', 'datasource_name')
-    #op.drop_column('slices', 'datasource_type')
+    op.drop_column('slices', 'datasource_id')
+    op.drop_column('slices', 'datasource_name')
+    op.drop_column('slices', 'datasource_type')
     op.add_column('slices', sa.Column('datasources_type', sa.String(length=200), nullable=True))
 
-    #op.drop_column('slices', 'perm')
+    op.drop_column('slices', 'perm')
 
 
 def downgrade():
