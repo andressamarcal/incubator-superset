@@ -63,14 +63,20 @@ def upgrade():
     sa.PrimaryKeyConstraint('id')
     )
 
-    op.drop_column('slices', 'datasource_id')
-    op.drop_column('slices', 'datasource_name')
-    op.drop_column('slices', 'perm')
+    #op.drop_column('slices', 'datasource_id')
+    #op.drop_column('slices', 'datasource_name')
+    #op.drop_column('slices', 'datasource_type')
+    op.add_column('slices', sa.Column('datasources_type', sa.String(length=200), nullable=True))
+
+    #op.drop_column('slices', 'perm')
 
 
 def downgrade():
-    op.add_column('slices', sa.Column('datasource_name', sa.VARCHAR(length=2000), nullable=True))
     op.add_column('slices', sa.Column('perm', sa.VARCHAR(length=2000), nullable=True))
+
+    op.drop_column('slices', 'datasources_type')
+    op.add_column('slices', sa.Column('datasource_type', sa.VARCHAR(length=200), nullable=True))
+    op.add_column('slices', sa.Column('datasource_name', sa.VARCHAR(length=2000), nullable=True))
     op.add_column('slices', sa.Column('datasource_id', sa.INTEGER(), nullable=True))
 
     op.drop_table('slice__table_datasource')

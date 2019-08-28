@@ -29,11 +29,11 @@ export const druidTimeSeries = {
   ],
 };
 
-export const datasourceAndVizType = {
-  label: t('Datasource & Chart Type'),
+export const datasourcesAndVizType = {
+  label: t('Datasource(s) & Chart Type'),
   expanded: true,
   controlSetRows: [
-    ['datasource'],
+    ['datasources'],
     ['viz_type'],
     ['slice_id', 'cache_timeout', 'url_params'],
   ],

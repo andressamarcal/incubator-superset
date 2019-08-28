@@ -35,7 +35,7 @@ import * as exploreActions from '../actions/exploreActions';
 const propTypes = {
   actions: PropTypes.object.isRequired,
   alert: PropTypes.string,
-  datasource_type: PropTypes.string.isRequired,
+  datasources_type: PropTypes.string.isRequired,
   exploreState: PropTypes.object.isRequired,
   controls: PropTypes.object.isRequired,
   form_data: PropTypes.object.isRequired,
@@ -75,7 +75,7 @@ class ControlPanelsContainer extends React.Component {
   }
 
   sectionsToRender() {
-    return sectionsToRender(this.props.form_data.viz_type, this.props.datasource_type);
+    return sectionsToRender(this.props.form_data.viz_type, this.props.datasources_type);
   }
 
   removeAlert() {

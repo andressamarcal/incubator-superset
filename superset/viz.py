@@ -84,11 +84,14 @@ class BaseViz(object):
     cache_type = "df"
     enforce_numerical_metrics = True
 
-    def __init__(self, datasource, form_data, force=False):
-        if not datasource:
+    def __init__(self, datasources, form_data, force=False):
+        if not datasources:
             raise Exception(_("Viz is missing a datasource"))
 
-        self.datasource = datasource
+        self.datasource = datasources[0]
+        if not self.datasource:
+            raise Exception(_("Viz is missing a datasource"))
+
         self.request = request
         self.viz_type = form_data.get("viz_type")
         self.form_data = form_data

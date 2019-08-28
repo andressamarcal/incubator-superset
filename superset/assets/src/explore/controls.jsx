@@ -65,6 +65,11 @@ import {
   formatSelectOptions,
   mainMetric,
 } from '../modules/utils';
+import {
+  mergeArraysOfObjects,
+  mergeColumns,
+  mergeMetrics,
+} from './controlUtils';
 import * as v from './validators';
 import { defaultViewport } from '../modules/geo';
 import ColumnOption from '../components/ColumnOption';
@@ -118,24 +123,6 @@ const sortAxisChoices = [
   ['value_desc', 'sum(value) descending'],
 ];
 
-const mergeColumns = (datasources, fieldToFilter) => {
-  return datasources.reduce((ds1, ds2) => {
-    const columns = [];
-    let ds2_columns = ds2.filter(fieldToFilter);
-    for (const c1 of ds1.columns.filter(fieldToFilter)) {
-
-      const prev_length = ds2_columns.length;
-      ds2_columns = ds2_columns.filter(c => c.column != c1.column && c.type != c1.type && c.expression != c1.expression)
-      const pos_length = ds2_columns.length;
-
-      if (prev_length != pos_length) {
-        columns.push(c1)
-      }
-    }
-    return columns;
-  });
-}
-
 const groupByControl = {
   type: 'SelectControl',
   multi: true,
@@ -155,14 +142,9 @@ const groupByControl = {
   promptTextCreator: label => label,
   mapStateToProps: (state, control) => {
     const newState = {};
-    const ds = state.datasource;
-    if (ds) {
-      if (Array.isArray(ds)) {
-        newState.options = mergeColumns(ds, c => c.groupby);
-      }
-      else {
-        newState.options = ds.columns.filter(c => c.groupby);
-      }
+    const datasources = state.datasources;
+    if (datasources) {
+      newState.options = mergeColumns(datasources, c => c.groupby)
 
       if (control && control.includeTime) {
         newState.options.push(timeColumnOption);
@@ -183,21 +165,13 @@ const metrics = {
     return metric ? [metric] : null;
   },
   mapStateToProps: (state) => {
-    const ds = state.datasource;
-    let props = {};
-    if (ds && Array.isArray(ds)) {
-      props = {
-        columns: mergeColumns(ds, c => true),  // TODO
-        savedMetrics: datasource.metrics,
-        datasourceType: ds.map(d => d.type),
-      };
-    }
-    else {
-      props = {
-        columns: ds ? ds.columns : [],
-        savedMetrics: ds ? ds.metrics : [],
-        datasourceType: ds && ds.type,
-      };
+    const datasources = state.datasources;
+    const datasources_type = state.datasources_type;
+
+    const props =  {
+      columns: datasources ? mergeColumns(datasources, c => true) : [],
+      savedMetrics: datasources ? mergeMetrics(datasources, datasources_type) : [],
+      datasourcesType: datasources_type,
     }
 
     return props;
@@ -224,9 +198,9 @@ const jsFunctionInfo = (
   </div>
 );
 
-function columnChoices(datasource) {
-  if (datasource && datasource.columns) {
-    return datasource.columns
+function columnChoices(datasources) {
+  if (datasources && datasources.every(ds => ds.columns)) {
+    return mergeColumns(datasources, () => true)
       .map(col => [col.column_name, col.verbose_name || col.column_name])
       .sort((opt1, opt2) => opt1[1].toLowerCase() > opt2[1].toLowerCase() ? 1 : -1);
   }
@@ -262,13 +236,14 @@ export const controls = {
 
   metric,
 
-  datasource: {
-    type: 'DatasourceControl',
-    label: t('Datasource'),
+  datasources: {
+    type: 'DatasourcesControl',
+    label: t('Datasource(s)'),
     default: null,
     description: null,
     mapStateToProps: (state, control, actions) => ({
-      datasource: state.datasource,
+      datasources: state.datasources,
+      datasources_type: state.datasources_type,
       onDatasourceSave: actions ? actions.setDatasource : () => {},
     }),
   },
@@ -307,7 +282,13 @@ export const controls = {
     default: [],
     description: t('One or many metrics to display'),
     mapStateToProps: state => ({
-      choices: (state.datasource) ? state.datasource.order_by_choices : [],
+      choices: (state.datasources) ?
+      mergeArraysOfObjects(
+        state.datasources,
+        ds => ds.order_by_choices,
+        () => true,
+        choice1 => (choice2 => choice1[0] == choice2[0] && choice1[1] == choice2[2]),
+      ) : [],
     }),
   },
   color_picker: {
@@ -689,7 +670,7 @@ export const controls = {
     valueKey: 'column_name',
     allowAll: true,
     mapStateToProps: state => ({
-      options: (state.datasource) ? state.datasource.columns : [],
+      options: (state.datasources) ? mergeColumns(state.datasources, () => true) : [],
     }),
     commaChoosesOption: false,
     freeForm: true,
@@ -701,7 +682,7 @@ export const controls = {
     validators: [v.nonEmpty],
     description: t('Point to your spatial columns'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -711,7 +692,7 @@ export const controls = {
     validators: [v.nonEmpty],
     description: t('Point to your spatial columns'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -721,7 +702,7 @@ export const controls = {
     validators: [v.nonEmpty],
     description: t('Point to your spatial columns'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -732,7 +713,7 @@ export const controls = {
     validators: [v.nonEmpty],
     description: t('Select the longitude column'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -743,7 +724,7 @@ export const controls = {
     validators: [v.nonEmpty],
     description: t('Select the latitude column'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -760,7 +741,7 @@ export const controls = {
     validators: [v.nonEmpty],
     description: t('Select the geojson column'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -770,7 +751,7 @@ export const controls = {
     validators: [v.nonEmpty],
     description: t('Select the polygon column. Each row should contain JSON.array(N) of [longitude, latitude] points'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -799,7 +780,7 @@ export const controls = {
     default: null,
     description: t('Columns to display'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -809,7 +790,7 @@ export const controls = {
     default: null,
     description: t('Columns to display'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -949,24 +930,13 @@ export const controls = {
     valueKey: 'column_name',
     mapStateToProps: (state) => {
       const props = {};
-      const ds = state.datasource;
-      if (ds) {
-        if (Array.isArray(ds)) {
-          props.options = mergeColumns(ds, c => c.is_dttm);
+      const datasources = state.datasources;
+      if (datasources) {
+        props.options = mergeColumns(datasources, c => c.is_dttm);
 
-          props.default = null;
-          if (props.options && props.options.length > 0) {
-            props.default = props.options[0].column_name;
-          }
-        }
-        else {
-          props.options = state.datasource.columns.filter(c => c.is_dttm);
-          props.default = null;
-          if (state.datasource.main_dttm_col) {
-            props.default = state.datasource.main_dttm_col;
-          } else if (props.options && props.options.length > 0) {
-            props.default = props.options[0].column_name;
-          }
+        props.default = null;
+        if (props.options && props.options.length > 0) {
+          props.default = props.options[0].column_name;
         }
       }
       return props;
@@ -982,9 +952,20 @@ export const controls = {
     'your time column and defines a new time granularity. ' +
     'The options here are defined on a per database ' +
     'engine basis in the Superset source code.'),
-    mapStateToProps: state => ({
-      choices: (state.datasource) ? state.datasource.time_grain_sqla : null,
-    }),
+    mapStateToProps: function (state) {
+      const datasources = state.datasources;
+      if (!datasources)
+        return null;
+      const choices = mergeArraysOfObjects(
+        datasources,
+        ds => ds.time_grain_sqla,
+        () => true,
+        tg1 => (tg2 => tg1[0] === tg2[0])
+      )
+      return {
+        choices: (state.datasources) ? choices : null,
+      }
+    },
   },
 
   resample_rule: {
@@ -1080,11 +1061,16 @@ export const controls = {
     label: t('Sort By'),
     default: null,
     description: t('Metric used to define the top series'),
-    mapStateToProps: state => ({
-      columns: state.datasource ? state.datasource.columns : [],
-      savedMetrics: state.datasource ? state.datasource.metrics : [],
-      datasourceType: state.datasource && state.datasource.type,
-    }),
+    mapStateToProps: state => {
+      const datasources = state.datasources;
+      const datasources_type = state.datasources_type;
+
+      return {
+        columns: datasources ? mergeColumns(datasources, () => true) : [],
+        savedMetrics: datasources ? mergeMetrics(datasources, datasources_type) : [],
+        datasourceType: datasources_type,
+      };
+    },
   },
 
   order_desc: {
@@ -1847,7 +1833,7 @@ export const controls = {
     'Non-numerical columns will be used to label points. ' +
     'Leave empty to get a count of points in each cluster.'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
   },
 
@@ -1895,7 +1881,7 @@ export const controls = {
     default: { type: 'fix', value: 1000 },
     description: t('Fixed point radius'),
     mapStateToProps: state => ({
-      datasource: state.datasource,
+      datasources: state.datasources,
     }),
   },
 
@@ -1907,7 +1893,7 @@ export const controls = {
     'Either a numerical column or `Auto`, which scales the point based ' +
     'on the largest cluster'),
     mapStateToProps: state => ({
-      choices: formatSelectOptions(['Auto']).concat(columnChoices(state.datasource)),
+      choices: formatSelectOptions(['Auto']).concat(columnChoices(state.datasources)),
     }),
   },
 
@@ -2088,11 +2074,17 @@ export const controls = {
     label: t('Filters'),
     default: null,
     description: '',
-    mapStateToProps: state => ({
-      columns: state.datasource ? state.datasource.columns.filter(c => c.filterable) : [],
-      savedMetrics: state.datasource ? state.datasource.metrics : [],
-      datasource: state.datasource,
-    }),
+    mapStateToProps: state => {
+      const datasources = state.datasources;
+      const datasources_type = state.datasources_type;
+
+      return {
+        columns: datasources ? mergeColumns(datasources, c => c.filterable) : [],
+        savedMetrics: datasources ? mergeMetrics(datasources, datasources_type) : [],
+        datasources: datasources,
+        datasources_type: datasources_type,
+      }
+    },
     provideFormDataToProps: true,
   },
 
@@ -2299,7 +2291,7 @@ export const controls = {
     default: null,
     description: t('The database columns that contains lines information'),
     mapStateToProps: state => ({
-      choices: columnChoices(state.datasource),
+      choices: columnChoices(state.datasources),
     }),
     validators: [v.nonEmpty],
   },
@@ -2443,7 +2435,10 @@ export const controls = {
     description: t('Filter configuration for the filter box'),
     validators: [],
     controlName: 'FilterBoxItemControl',
-    mapStateToProps: ({ datasource }) => ({ datasource }),
+    mapStateToProps: state => ({
+      datasources: state.datasources,
+      datasources_type: state.datasources_type
+    }),
   },
 
   normalized: {

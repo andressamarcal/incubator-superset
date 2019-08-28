@@ -51,7 +51,7 @@ export const FILTER_LABELS = {
 const propTypes = {
   chartId: PropTypes.number.isRequired,
   origSelectedValues: PropTypes.object,
-  datasource: PropTypes.object.isRequired,
+  datasources: PropTypes.array.isRequired,
   instantFiltering: PropTypes.bool,
   filtersFields: PropTypes.arrayOf(PropTypes.shape({
     field: PropTypes.string,

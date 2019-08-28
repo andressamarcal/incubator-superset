@@ -39,8 +39,9 @@ import ChangeDatasourceModal from '../../../datasource/ChangeDatasourceModal';
 
 const propTypes = {
   onChange: PropTypes.func,
-  value: PropTypes.string,
-  datasource: PropTypes.object.isRequired,
+  value: PropTypes.object,
+  datasources: PropTypes.array.isRequired,
+  datasources_type: PropTypes.string.isRequired,
   onDatasourceSave: PropTypes.func,
 };
 
@@ -50,34 +51,23 @@ const defaultProps = {
   value: null,
 };
 
-class DatasourceControl extends React.PureComponent {
+class DatasourcesControl extends React.PureComponent {
   constructor(props) {
     super(props);
 
-    if (Array.isArray(this.props.datasource)) {
-      const datasource_count = this.props.datasource.length;
-      this.state = {
-        showEditDatasourceModal: Array(datasource_count).fill(false),
-        showChangeDatasourceModal: Array(datasource_count).fill(false),
-        menuExpanded: Array(datasource_count).fill(false),
-        showDatasource: Array(datasource_count).fill(false),
-      };
-    }
-    else {
-      this.state = {
-        showEditDatasourceModal: false,
-        showChangeDatasourceModal: false,
-        menuExpanded: false,
-        showDatasource: false,
-      };
-    }
+    const datasource_count = this.props.datasources.length;
+    this.state = {
+      showEditDatasourceModal: Array(datasource_count).fill(false),
+      showChangeDatasourceModal: Array(datasource_count).fill(false),
+      menuExpanded: Array(datasource_count).fill(false),
+      showDatasource: Array(datasource_count).fill(false),
+    };
 
     this.toggleVariable = this.toggleVariable.bind(this);
     this.toggleChangeDatasourceModal = this.toggleChangeDatasourceModal.bind(this);
     this.toggleEditDatasourceModal = this.toggleEditDatasourceModal.bind(this);
     this.toggleShowDatasource = this.toggleShowDatasource.bind(this);
     this.renderDatasource = this.renderDatasource.bind(this);
-    this.renderDatasourceLayout = this.renderDatasourceLayout.bind(this);
     this.renderDatasources = this.renderDatasources.bind(this);
   }
 
@@ -85,27 +75,25 @@ class DatasourceControl extends React.PureComponent {
    * Function used to reduce some code duplication
    *  on the three function under
    */
-  toggleVariable(variable, datasource_idx) {
-    return datasource_idx ?
-      variable.map( (val, idx) => idx == datasource_idx ? !val : val) :
-      !variable;
+  toggleVariable(variable, datasources_idx) {
+    return variable.map( (val, idx) => idx == datasources_idx ? !val : val);
   }
 
-  toggleShowDatasource(datasource_idx) {
+  toggleShowDatasource(datasources_idx) {
     this.setState(({ showDatasource }) => ({
-      showDatasource : this.toggleVariable(showDatasource, datasource_idx),
+      showDatasource : this.toggleVariable(showDatasource, datasources_idx),
     }));
   }
 
-  toggleChangeDatasourceModal(datasource_idx) {
+  toggleChangeDatasourceModal(datasources_idx) {
     this.setState(({ showChangeDatasourceModal }) => ({
-      showChangeDatasourceModal: this.toggleVariable(showChangeDatasourceModal, datasource_idx),
+      showChangeDatasourceModal: this.toggleVariable(showChangeDatasourceModal, datasources_idx),
     }));
   }
 
-  toggleEditDatasourceModal(datasource_idx) {
+  toggleEditDatasourceModal(datasources_idx) {
     this.setState(({ showEditDatasourceModal }) => ({
-      showEditDatasourceModal: this.toggleVariable(showEditDatasourceModal, datasource_idx),
+      showEditDatasourceModal: this.toggleVariable(showEditDatasourceModal, datasources_idx),
     }));
   }
 
@@ -142,24 +130,19 @@ class DatasourceControl extends React.PureComponent {
     );
   }
 
-  renderDatasourceLayout(datasource_idx) {
-    let { showDatasource, menuExpanded, showChangeDatasourceModal, showEditDatasourceModal } = this.state;
-    let { datasource, onChange, onDatasourceSave, value } = this.props;
+  renderDatasources(datasources_idx) {
+    const showDatasource = this.state.showDatasource[datasources_idx];
+    const menuExpanded = this.state.menuExpanded[datasources_idx];
+    const showChangeDatasourceModal = this.state.showChangeDatasourceModal[datasources_idx];
+    const showEditDatasourceModal = this.state.showEditDatasourceModal[datasources_idx];
 
-    if (datasource_idx) {
-      showDatasource = this.state.showDatasource[datasource_idx];
-      menuExpanded = this.state.menuExpanded[datasource_idx];
-      showChangeDatasourceModal = this.state.showChangeDatasourceModal[datasource_idx];
-      showEditDatasourceModal = this.state.showEditDatasourceModal[datasource_idx];
-
-      datasource = this.props.datasource[datasource_idx];
-      onChange = this.props.onChange[datasource_idx];
-      onDatasourceSave = this.props.onDatasourceSave[datasource_idx];
-      value = this.props.value[datasource_idx];
-    }
+    const datasource = this.props.datasources[datasources_idx];
+    const onChange = this.props.onChange[datasources_idx];
+    const onDatasourceSave = this.props.onDatasourceSave[datasources_idx];
+    const value = `${datasource.id}__${this.props.datasources_type}`;
 
     return (
-      <React.Fragment>
+      <Col md={6} key={datasource}>
         <div className="btn-group label-dropdown">
           <OverlayTrigger
             placement="right"
@@ -168,7 +151,7 @@ class DatasourceControl extends React.PureComponent {
             }
           >
             <div className="btn-group">
-              <Label onClick={() => this.toggleEditDatasourceModal(datasource_idx)} className="label-btn-label">
+              <Label onClick={() => this.toggleEditDatasourceModal(datasources_idx)} className="label-btn-label">
                 {datasource.name}
               </Label>
             </div>
@@ -185,7 +168,7 @@ class DatasourceControl extends React.PureComponent {
           >
             <MenuItem
               eventKey="3"
-              onClick={() => this.toggleEditDatasourceModal(datasource_idx)}
+              onClick={() => this.toggleEditDatasourceModal(datasources_idx)}
             >
               {t('Edit Datasource')}
             </MenuItem>
@@ -200,7 +183,7 @@ class DatasourceControl extends React.PureComponent {
               </MenuItem>}
             <MenuItem
               eventKey="3"
-              onClick={() => this.toggleChangeDatasourceModal(datasource_idx)}
+              onClick={() => this.toggleChangeDatasourceModal(datasources_idx)}
             >
               {t('Change Datasource')}
             </MenuItem>
@@ -216,59 +199,41 @@ class DatasourceControl extends React.PureComponent {
             <a href="#">
               <i
                 className={`fa fa-${showDatasource ? 'minus' : 'plus'}-square m-r-5 m-l-5 m-t-4`}
-                onClick={() => this.toggleShowDatasource(datasource_idx)}
+                onClick={() => this.toggleShowDatasource(datasources_idx)}
               />
             </a>
           </OverlayTrigger>
         </div>
         <Collapse in={showDatasource}>{this.renderDatasource(datasource)}</Collapse>
-        <DatasourceModal
+        <DatasourceModal  // TODO might need changes because of the new multiple datasource support
           datasource={datasource}
           show={showEditDatasourceModal}
           onDatasourceSave={onDatasourceSave}
-          onHide={() => this.toggleEditDatasourceModal(datasource_idx)}
+          onHide={() => this.toggleEditDatasourceModal(datasources_idx)}
         />
-        <ChangeDatasourceModal
+        <ChangeDatasourceModal  // TODO might need changes because of the new multiple datasource support
           onDatasourceSave={onDatasourceSave}
-          onHide={() => this.toggleChangeDatasourceModal(datasource_idx)}
+          onHide={() => this.toggleChangeDatasourceModal(datasources_idx)}
           show={showChangeDatasourceModal}
           onChange={onChange}
         />
-      </React.Fragment>
-    );
-  }
-
-  renderDatasources(datasource_idx) {
-    return (
-      <Col md={4}>
-        {this.renderDatasourceLayout(datasource_idx)}
       </Col>
     );
   }
 
   render() {
-    let datasource_render;
-    if (Array.isArray(this.props.datasource)) {
-      datasource_render = (
-        <Row>
-          {_.range(this.props.datasource.length).map(this.renderDatasources)}
-        </Row>
-      )
-    }
-    else {
-      datasource_render = this.renderDatasourceLayout();
-    }
-
     return (
       <div>
         <ControlHeader {...this.props} />
-        {datasource_render}
+        <Row>
+          {_.range(this.props.datasources.length).map(this.renderDatasources)}
+        </Row>
       </div>
     );
   }
 }
 
-DatasourceControl.propTypes = propTypes;
-DatasourceControl.defaultProps = defaultProps;
+DatasourcesControl.propTypes = propTypes;
+DatasourcesControl.defaultProps = defaultProps;
 
-export default DatasourceControl;
+export default DatasourcesControl;

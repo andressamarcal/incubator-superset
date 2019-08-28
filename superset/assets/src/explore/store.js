@@ -51,7 +51,7 @@ export function getControlsState(state, inputFormData) {
 
   const controlsState = getAllControlsState(
     vizType,
-    state.datasource.type,
+    state.datasources_type,
     state,
     formData,
   );

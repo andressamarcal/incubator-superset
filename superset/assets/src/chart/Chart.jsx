@@ -33,7 +33,7 @@ const propTypes = {
   annotationData: PropTypes.object,
   actions: PropTypes.object,
   chartId: PropTypes.number.isRequired,
-  datasource: PropTypes.object.isRequired,
+  datasources: PropTypes.array.isRequired,
   // original selected values for FilterBox viz
   // so that FilterBox can pre-populate selected values
   // only affect UI control

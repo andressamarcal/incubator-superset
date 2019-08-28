@@ -106,7 +106,7 @@ def load_country_map_data(only_metadata=False, force=False):
     slc = Slice(
         slice_name="Birth in France by department in 2016",
         viz_type="country_map",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )

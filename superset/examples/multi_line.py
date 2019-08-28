@@ -33,7 +33,7 @@ def load_multi_line(only_metadata=False):
     ]
 
     slc = Slice(
-        datasource_type="table",  # not true, but needed
+        datasources_type="table",  # not true, but needed
         table_datasources=[db.session.query(TBL).filter_by(table_name="energy_usage").first()],
         slice_name="Multi Line",
         viz_type="line_multi",

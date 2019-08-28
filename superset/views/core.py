@@ -151,15 +151,15 @@ def check_datasource_perms(
     form_data = get_form_data()[0]
 
     try:
-        datasource_id, datasource_type = get_datasource_info(
+        datasources_ids, datasources_type = get_datasource_info(
             datasource_id, datasource_type, form_data
         )
     except SupersetException as e:
         raise SupersetSecurityException(str(e))
 
     viz_obj = get_viz(
-        datasource_type=datasource_type,
-        datasource_id=datasource_id,
+        datasources_type=datasources_type,
+        datasources_ids=datasources_ids,
         form_data=form_data,
         force=False,
     )
@@ -176,11 +176,11 @@ def check_slice_perms(self, slice_id):
 
     """
     form_data, slc = get_form_data(slice_id, use_slice_data=True)
-    datasource_type = slc.datasource.type
-    datasource_id = slc.datasource.id
+    datasources_type = slc.datasource_type
+    datasources_ids = [ds.id for ds in slc.datasource]
     viz_obj = get_viz(
-        datasource_type=datasource_type,
-        datasource_id=datasource_id,
+        datasources_type=datasources_type,
+        datasources_ids=datasources_ids,
         form_data=form_data,
         force=False,
     )
@@ -306,7 +306,7 @@ class SliceModelView(SupersetModelView, DeleteMixin):  # noqa
         f"{source}_datasources" for source in ConnectorRegistry.sources.keys()] + [
         "owners",
     ]
-    list_columns = ["slice_link", "viz_type", "datasource_link", "creator", "modified"]
+    list_columns = ["slice_link", "viz_type", "datasources_link", "creator", "modified"]
     order_columns = ["viz_type", "modified"]
     edit_columns = [
         "slice_name",
@@ -341,7 +341,7 @@ class SliceModelView(SupersetModelView, DeleteMixin):  # noqa
         "cache_timeout": _("Cache Timeout"),
         "creator": _("Creator"),
         "dashboards": _("Dashboards"),
-        "datasource_link": _("Datasource(s)"),
+        "datasources_link": _("Datasource(s)"),
         "description": _("Description"),
         "modified": _("Last Modified"),
         "owners": _("Owners"),
@@ -1104,15 +1104,15 @@ class Superset(BaseSupersetView):
         form_data = get_form_data()[0]
 
         try:
-            datasource_id, datasource_type = get_datasource_info(
+            datasources_ids, datasources_type = get_datasource_info(
                 datasource_id, datasource_type, form_data
             )
         except SupersetException as e:
             return json_error_response(utils.error_msg_from_exception(e))
 
         viz_obj = get_viz(
-            datasource_type=datasource_type,
-            datasource_id=datasource_id,
+            datasources_type=datasources_type,
+            datasources_ids=datasources_ids,
             form_data=form_data,
             force=force,
         )
@@ -1199,42 +1199,31 @@ class Superset(BaseSupersetView):
         error_redirect = "/chart/list/"
 
         try:
-            datasource_id, datasource_type = get_datasource_info(
+            datasources_ids, datasources_type = get_datasource_info(
                 datasource_id, datasource_type, form_data
             )
         except SupersetException:
             return redirect(error_redirect)
 
-        if isinstance(datasource_id, list):
-            datasource = []
-            for i in range(len(datasource_id)):
-                ds_id = datasource_id[i]
-                ds_type = datasource_type[i]
+        datasources = []
+        for ds_id in datasources_ids:
 
-                ds = self._get_datasource(ds_type, ds_id, db.session)
+            ds = self._get_datasource(datasources_type, ds_id, db.session)
 
-                if isinstance(ds, wrappers.Response):
-                    return ds
+            if isinstance(ds, wrappers.Response):
+                return ds
 
-                datasource.append(ds)
+            datasources.append(ds)
 
-            datasources_reprs = []
-            for i in range(len(datasource_id)):
-                ds_id = datasource_id[i]
-                ds_type = datasource_type[i]
-
-                datasources_reprs.append(f"{ds_id}__{ds_type}")
-            form_data["datasource"] = datasources_reprs
-        else:
-            datasource = self._get_datasource(datasource_type, datasource_id, db.session)
-            if isinstance(datasource, wrappers.Response):
-                return datasource
-
-            form_data["datasource"] = f"{datasource_id}__{datasource_type}"
+        form_data["datasources"] = {
+            "ids": datasources_ids,
+            "type": datasources_type,
+        }
 
         viz_type = form_data.get("viz_type")
-        if not viz_type and not isinstance(datasource, list) and datasource.default_endpoint:
-            return redirect(datasource.default_endpoint)
+        if not viz_type and datasources[0].default_endpoint:
+            # TODO if no viz is defined can I be sure that there's only on datasource?
+            return redirect(datasources[0].default_endpoint)
 
         # slc perms
         slice_add_perm = security_manager.can_access("can_add", "SliceModelView")
@@ -1273,9 +1262,9 @@ class Superset(BaseSupersetView):
                 slice_add_perm,
                 slice_overwrite_perm,
                 slice_download_perm,
-                datasource_id,
-                datasource_type,
-                [ds.name for ds in datasource] if isinstance(datasource, list) else datasource.name,
+                datasources_ids,
+                datasources_type,
+                [ds.name for ds in datasources],
             )
 
         standalone = request.args.get("standalone") == "true"
@@ -1283,10 +1272,10 @@ class Superset(BaseSupersetView):
             "can_add": slice_add_perm,
             "can_download": slice_download_perm,
             "can_overwrite": slice_overwrite_perm,
-            "datasource": [ds.data for ds in datasource] if isinstance(datasource, list) else datasource.data,
+            "datasources": [ds.data for ds in datasources],
             "form_data": form_data,
-            "datasource_id": datasource_id,
-            "datasource_type": datasource_type,
+            "datasources_ids": datasources_ids,
+            "datasources_type": datasources_type,
             "slice": slc.data if slc else None,
             "standalone": standalone,
             "user_id": user_id,
@@ -1295,15 +1284,15 @@ class Superset(BaseSupersetView):
         }
         if slc:
             title = slc.slice_name
-        elif not isinstance(datasource, list):
+        elif not viz_type:  # TODO some as the todo above
             table_name = (
-                datasource.table_name
-                if datasource_type == "table"
-                else datasource.datasource_name
+                datasources[0].table_name
+                if datasources_type == "table"
+                else datasources[0].datasource_name
             )
             title = _("Explore - %(table)s", table=table_name)
         else:
-            title = "Multi datasource explore"
+            title = "Multi Datasource Explore"
 
         return self.render_template(
             "superset/basic.html",
@@ -1333,7 +1322,6 @@ class Superset(BaseSupersetView):
     @handle_api_exception
     @has_access_api
     @expose("/filter/<datasource_type>/<datasource_id>/<column>/")
-    @expose("/filter/<column>/")
     def filter(self, datasource_type, datasource_id, column):
         """
         Endpoint to retrieve values for specified column.
@@ -1343,22 +1331,18 @@ class Superset(BaseSupersetView):
         :param column: Column name to retrieve values for
         :return:
         """
+        datasource_id = json.loads(datasource_id)
 
-        if not datasource_type and not datasource_id:
-            datasources = request.args.get("datasources")
-            if not datasources:
-                json_error_response(DATASOURCE_MISSING_ERR)
+        if isinstance(datasource_id, list):
 
-            datasources = json.loads(datasources)
-
-            payload = []
-            for ds_id, ds_type in datasources:
-                values = self._get_datasource_column_values(ds_type, ds_id, column)
+            payload = set()
+            for ds_id in datasource_id:
+                values = self._get_datasource_column_values(datasource_type, ds_id, column)
 
                 if isinstance(values, Response):
                     return values
 
-                payload += values
+                payload.update(values)
 
         else:
             payload = self._get_datasource_column_values(datasource_type, datasource_id, column)
@@ -1383,7 +1367,7 @@ class Superset(BaseSupersetView):
         datasource_id,
         datasource_type,
         datasource_name,
-    ):
+    ):  # TODO broken with new changes on the Slice model
         """Save or overwrite a slice"""
         slice_name = args.get("slice_name")
         action = args.get("action")

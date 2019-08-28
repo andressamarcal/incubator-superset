@@ -201,7 +201,7 @@ def load_deck_dash():
     slc = Slice(
         slice_name="Scatterplot",
         viz_type="deck_scatter",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
@@ -239,7 +239,7 @@ def load_deck_dash():
     slc = Slice(
         slice_name="Screen grid",
         viz_type="deck_screengrid",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
@@ -278,7 +278,7 @@ def load_deck_dash():
     slc = Slice(
         slice_name="Hexagons",
         viz_type="deck_hex",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
@@ -317,7 +317,7 @@ def load_deck_dash():
     slc = Slice(
         slice_name="Grid",
         viz_type="deck_grid",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[tbl],
         params=get_slice_json(slice_data),
     )
@@ -411,7 +411,7 @@ def load_deck_dash():
     slc = Slice(
         slice_name="Polygons",
         viz_type="deck_polygon",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[polygon_tbl],
         params=get_slice_json(slice_data),
     )
@@ -464,7 +464,7 @@ def load_deck_dash():
     slc = Slice(
         slice_name="Arcs",
         viz_type="deck_arc",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[db.session.query(TBL).filter_by(table_name="flights").first()],
         params=get_slice_json(slice_data),
     )
@@ -516,7 +516,7 @@ def load_deck_dash():
     slc = Slice(
         slice_name="Path",
         viz_type="deck_path",
-        datasource_type="table",
+        datasources_type="table",
         table_datasources=[db.session.query(TBL).filter_by(table_name="bart_lines").first()],
         params=get_slice_json(slice_data),
     )

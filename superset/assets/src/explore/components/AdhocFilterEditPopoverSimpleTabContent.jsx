@@ -49,11 +49,12 @@ const propTypes = {
     ]),
   ).isRequired,
   onHeightChange: PropTypes.func.isRequired,
-  datasource: PropTypes.object,
+  datasources: PropTypes.array,
+  datasources_type: PropTypes.string,
 };
 
 const defaultProps = {
-  datasource: {},
+  datasources: {},
 };
 
 function translateOperator(operator) {
@@ -184,11 +185,11 @@ export default class AdhocFilterEditPopoverSimpleTabContent extends React.Compon
   }
 
   refreshComparatorSuggestions() {
-    const datasource = this.props.datasource;
+    const {datasources, datasources_type} = this.props;
     const col = this.props.adhocFilter.subject;
     const having = this.props.adhocFilter.clause === CLAUSES.HAVING;
 
-    if (col && datasource && datasource.filter_select && !having) {
+    if (col && datasources && !datasources.some(ds => !ds.filter_select) && !having) {
       if (this.state.abortActiveRequest) {
         this.state.abortActiveRequest();
       }
@@ -197,9 +198,14 @@ export default class AdhocFilterEditPopoverSimpleTabContent extends React.Compon
       const { signal } = controller;
       this.setState({ abortActiveRequest: controller.abort, loading: true });
 
+      const endpoint = 
+        `/superset/filter/` +
+        `${datasources_type}/` +
+        `${JSON.stringify(datasources.map(ds => ds.id))}/` +
+        `${col}/`;
       SupersetClient.get({
         signal,
-        endpoint: `/superset/filter/${datasource.type}/${datasource.id}/${col}/`,
+        endpoint: endpoint,
       }).then(({ json }) => {
         this.setState(() => ({ suggestions: json, abortActiveRequest: null, loading: false }));
       });
@@ -207,9 +213,10 @@ export default class AdhocFilterEditPopoverSimpleTabContent extends React.Compon
   }
 
   isOperatorRelevant(operator) {
+    const datasources_type = this.props.datasources_type;
     return !(
-      (this.props.datasource.type === 'druid' && TABLE_ONLY_OPERATORS.indexOf(operator) >= 0) ||
-      (this.props.datasource.type === 'table' && DRUID_ONLY_OPERATORS.indexOf(operator) >= 0) ||
+      (datasources_type === 'druid' && TABLE_ONLY_OPERATORS.indexOf(operator) >= 0) ||
+      (datasources_type === 'table' && DRUID_ONLY_OPERATORS.indexOf(operator) >= 0) ||
       (this.props.adhocFilter.clause === CLAUSES.HAVING &&
         HAVING_OPERATORS.indexOf(operator) === -1)
     );
@@ -228,7 +235,7 @@ export default class AdhocFilterEditPopoverSimpleTabContent extends React.Compon
   }
 
   render() {
-    const { adhocFilter, options, datasource } = this.props;
+    const { adhocFilter, options, datasources_type } = this.props;
 
     let subjectSelectProps = {
       value: adhocFilter.subject ? { value: adhocFilter.subject } : undefined,
@@ -239,7 +246,7 @@ export default class AdhocFilterEditPopoverSimpleTabContent extends React.Compon
       noResultsText: t('No such column found. To filter on a metric, try the Custom SQL tab.'),
     };
 
-    if (datasource.type === 'druid') {
+    if (datasources_type === 'druid') {
       subjectSelectProps = {
         ...subjectSelectProps,
         placeholder: t('%s column(s) and metric(s)', options.length),

@@ -34,7 +34,7 @@ const propTypes = {
   onMetricEdit: PropTypes.func,
   columns: PropTypes.arrayOf(columnType),
   multi: PropTypes.bool,
-  datasourceType: PropTypes.string,
+  datasourcesType: PropTypes.string,
 };
 
 export default function MetricDefinitionValue({
@@ -42,7 +42,7 @@ export default function MetricDefinitionValue({
   onMetricEdit,
   columns,
   multi,
-  datasourceType,
+  datasourcesType,
 }) {
   if (option.metric_name) {
     return (
@@ -55,7 +55,7 @@ export default function MetricDefinitionValue({
         onMetricEdit={onMetricEdit}
         columns={columns}
         multi={multi}
-        datasourceType={datasourceType}
+        datasourcesType={datasourcesType}
       />
     );
   }

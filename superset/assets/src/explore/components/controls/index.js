@@ -23,7 +23,7 @@ import CollectionControl from './CollectionControl';
 import ColorMapControl from './ColorMapControl';
 import ColorPickerControl from './ColorPickerControl';
 import ColorSchemeControl from './ColorSchemeControl';
-import DatasourceControl from './DatasourceControl';
+import DatasourcesControl from './DatasourcesControl';
 import DateFilterControl from './DateFilterControl';
 import FixedOrMetricControl from './FixedOrMetricControl';
 import HiddenControl from './HiddenControl';
@@ -50,7 +50,7 @@ const controlMap = {
   ColorMapControl,
   ColorPickerControl,
   ColorSchemeControl,
-  DatasourceControl,
+  DatasourcesControl,
   DateFilterControl,
   FixedOrMetricControl,
   HiddenControl,

@@ -28,7 +28,7 @@ const propTypes = {
   annotationData: PropTypes.object,
   actions: PropTypes.object,
   chartId: PropTypes.number.isRequired,
-  datasource: PropTypes.object.isRequired,
+  datasources: PropTypes.array.isRequired,
   initialValues: PropTypes.object,
   formData: PropTypes.object.isRequired,
   height: PropTypes.number,
@@ -180,7 +180,7 @@ class ChartRenderer extends React.Component {
       width,
       height,
       annotationData,
-      datasource,
+      datasources,
       initialValues,
       formData,
       queryResponse,
@@ -198,7 +198,7 @@ class ChartRenderer extends React.Component {
           width={width}
           height={height}
           annotationData={annotationData}
-          datasource={datasource}
+          datasource={{datasources:datasources}}
           filters={initialValues}
           formData={formData}
           payload={queryResponse}

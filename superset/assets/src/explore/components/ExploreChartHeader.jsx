@@ -43,7 +43,7 @@ const propTypes = {
   can_download: PropTypes.bool.isRequired,
   isStarred: PropTypes.bool.isRequired,
   slice: PropTypes.object,
-  table_name: PropTypes.string,
+  tables_name: PropTypes.array,
   form_data: PropTypes.object,
   timeout: PropTypes.number,
   chart: chartPropShape,
@@ -80,8 +80,10 @@ class ExploreChartHeader extends React.PureComponent {
     let title;
     if (this.props.slice) {
       title = this.props.slice.slice_name;
+    } else if (this.props.tables_name.length > 1) {
+      title = t('Multiple Datasource - untitled');
     } else {
-      title = t('%s - untitled', this.props.table_name);
+      title = t('%s - untitled', this.props.tables_name[0]);
     }
     return title;
   }

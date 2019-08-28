@@ -29,7 +29,7 @@ const propTypes = {
   onMetricEdit: PropTypes.func.isRequired,
   columns: PropTypes.arrayOf(columnType),
   multi: PropTypes.bool,
-  datasourceType: PropTypes.string,
+  datasourcesType: PropTypes.string,
 };
 
 export default class AdhocMetricOption extends React.PureComponent {
@@ -67,7 +67,7 @@ export default class AdhocMetricOption extends React.PureComponent {
         onChange={this.props.onMetricEdit}
         onClose={this.closeMetricEditOverlay}
         columns={this.props.columns}
-        datasourceType={this.props.datasourceType}
+        datasourcesType={this.props.datasourcesType}
       />
     );
 

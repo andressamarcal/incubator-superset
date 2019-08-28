@@ -33,7 +33,8 @@ const propTypes = {
     PropTypes.shape({ saved_metric_name: PropTypes.string.isRequired }),
     adhocMetricType,
   ])).isRequired,
-  datasource: PropTypes.object,
+  datasources: PropTypes.array,
+  datasources_type: PropTypes.string,
 };
 
 export default class AdhocFilterOption extends React.PureComponent {
@@ -75,7 +76,8 @@ export default class AdhocFilterOption extends React.PureComponent {
         onChange={this.props.onFilterEdit}
         onClose={this.closeFilterEditOverlay}
         options={this.props.options}
-        datasource={this.props.datasource}
+        datasources={this.props.datasources}
+        datasources_type={this.props.datasources_type}
       />
     );
 

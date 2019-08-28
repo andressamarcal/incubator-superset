@@ -56,7 +56,7 @@ const getHotKeys = () => Object.keys(keymap).map(k => ({
 
 const propTypes = {
   actions: PropTypes.object.isRequired,
-  datasource_type: PropTypes.string.isRequired,
+  datasources_type: PropTypes.string.isRequired,
   isDatasourceMetaLoading: PropTypes.bool.isRequired,
   chart: chartPropShape.isRequired,
   slice: PropTypes.object,
@@ -103,7 +103,7 @@ class ExploreViewContainer extends React.Component {
     }
   }
 
-  componentWillReceiveProps(nextProps) {
+  componentWillReceiveProps(nextProps) {  // TODO might need changes since the new support for multiple datasource
     if (nextProps.controls.viz_type.value !== this.props.controls.viz_type.value) {
       this.props.actions.resetControls();
     }
@@ -319,7 +319,7 @@ class ExploreViewContainer extends React.Component {
                 loading={this.props.chart.chartStatus === 'loading'}
                 chartIsStale={this.state.chartIsStale}
                 errorMessage={this.renderErrorMessage()}
-                datasourceType={this.props.datasource_type}
+                datasourcesType={this.props.datasources_type}
               />
               <div className="m-l-5 text-muted">
                 <Hotkeys
@@ -334,7 +334,7 @@ class ExploreViewContainer extends React.Component {
               actions={this.props.actions}
               form_data={this.props.form_data}
               controls={this.props.controls}
-              datasource_type={this.props.datasource_type}
+              datasources_type={this.props.datasources_type}
               isDatasourceMetaLoading={this.props.isDatasourceMetaLoading}
             />
           </div>
@@ -354,9 +354,9 @@ function mapStateToProps(state) {
   const chart = charts[chartKey];
   return {
     isDatasourceMetaLoading: explore.isDatasourceMetaLoading,
-    datasource: explore.datasource,
-    datasource_type: explore.datasource.type,
-    datasourceId: explore.datasource_id,
+    datasources: explore.datasources,
+    datasources_type: explore.datasources_type,
+    datasourcesIds: explore.datasources_ids,
     controls: explore.controls,
     can_overwrite: !!explore.can_overwrite,
     can_download: !!explore.can_download,
@@ -366,7 +366,7 @@ function mapStateToProps(state) {
     slice: explore.slice,
     triggerRender: explore.triggerRender,
     form_data,
-    table_name: form_data.datasource_name,
+    tables_name: explore.datasources.map(ds => ds.datasource_name),
     vizType: form_data.viz_type,
     standalone: explore.standalone,
     forcedHeight: explore.forced_height,

@@ -23,7 +23,6 @@ export default function transformProps(chartProps) {
     formData,
     onAddFilter,
     payload,
-    rawDatasource,
   } = chartProps;
   const {
     sliceId,
@@ -34,18 +33,19 @@ export default function transformProps(chartProps) {
     showSqlaTimeColumn,
     showSqlaTimeGranularity,
   } = formData;
-  const { verboseMap } = datasource;
+  //const { verboseMap } = datasource;  // TODO fix imply changes on @superset-ui/chart
   const filterConfigs = formData.filterConfigs || [];
 
   const filtersFields = filterConfigs.map(flt => ({
     ...flt,
     key: flt.column,
-    label: flt.label || verboseMap[flt.column] || flt.column,
+    //label: flt.label || verboseMap[flt.column] || flt.column,
+    label: flt.label || flt.column,
   }));
 
   return {
     chartId: sliceId,
-    datasource: rawDatasource,
+    datasources: datasource.datasources,
     filtersFields,
     filtersChoices: payload.data,
     instantFiltering,

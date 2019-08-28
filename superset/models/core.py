@@ -156,7 +156,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
     __tablename__ = "slices"
     id = Column(Integer, primary_key=True)
     slice_name = Column(String(250))
-    datasource_type = Column(String(200))
+    datasources_type = Column(String(200))
     viz_type = Column(String(250))
     params = Column(Text)
     description = Column(Text)
@@ -164,9 +164,9 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
     perms = relationship(SlicePerms)
     owners = relationship(security_manager.user_model, secondary=slice_user)
 
-    export_fields = (
+    export_fields = (  # TODO with changes for multiple datasources might need changes
         "slice_name",
-        "datasource_type",
+        "datasources_type",
         "viz_type",
         "params",
         "cache_timeout",
@@ -176,13 +176,13 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
         return self.slice_name or str(self.id)
 
     @property
-    def datasource(self):
-        return self.get_datasource
+    def datasources(self):
+        return self.get_datasources
 
     def clone(self):  # TODO with changes for multiple datasources might not work
         return Slice(
             slice_name=self.slice_name,
-            datasource_type=self.datasource_type,
+            datasources_type=self.datasources_type,
             table_datasources=self.table_datasources,
             druid_datasources=self.druid_datasources,
             viz_type=self.viz_type,
@@ -191,26 +191,26 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
             cache_timeout=self.cache_timeout,
         )
 
-    @datasource.getter  # type: ignore
+    @datasources.getter  # type: ignore
     @utils.memoized
-    def get_datasource(self):
-        return getattr(self, f"{self.datasource_type}_datasources")
+    def get_datasources(self):
+        return getattr(self, f"{self.datasources_type}_datasources")
 
-    def datasource_link(self):
+    def datasources_link(self):
         # pylint: disable=no-member
-        datasource = self.datasource
-        if not datasource:
+        datasources = self.datasources
+        if not datasources:
             return escape("")
-        return reduce(lambda l1, l2: l1 + escape(", ") + l2, [ds.link for ds in datasource])
+        return reduce(lambda l1, l2: l1 + escape(", ") + l2, [ds.link for ds in datasources])
 
     @property
-    def datasource_edit_url(self):  # TODO with changes for multiple datasources might not work properly
+    def datasources_edit_url(self):  # TODO with changes for multiple datasources might not work properly
         # pylint: disable=no-member
-        return [ds.url for ds in self.datasource]
+        return [ds.url for ds in self.datasources]
 
     @property
     def multi_datasource(self):
-        return "multi" in self.viz_type
+        return self.viz_type.startswith("multi_")
 
     @property  # type: ignore
     @utils.memoized
@@ -218,7 +218,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
         d = json.loads(self.params)
         viz_class = viz_types[self.viz_type]
         # pylint: disable=no-member
-        return viz_class(datasource=self.datasource, form_data=d)
+        return viz_class(datasources=self.datasources, form_data=d)
 
     @property
     def description_markeddown(self):
@@ -236,7 +236,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
             logging.exception(e)
             d["error"] = str(e)
         return {
-            "datasource": [ds.name for ds in self.datasource],
+            "datasources": [ds.name for ds in self.datasources],
             "description": self.description,
             "description_markeddown": self.description_markeddown,
             "edit_url": self.edit_url,
@@ -265,7 +265,11 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
             {
                 "slice_id": self.id,
                 "viz_type": self.viz_type,
-                "datasource": [f"{ds.id}__{ds.type}" for ds in self.datasource],
+                "multi_datasource": self.multi_datasource,
+                "datasources": {
+                    "ids": [ds.id for ds in self.datasources],
+                    "type": self.datasources_type,
+                },
             }
         )
 
@@ -319,16 +323,16 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
         slice_params["viz_type"] = self.viz_type if self.viz_type else "table"
 
         return viz_types[slice_params.get("viz_type")](
-            self.datasource, form_data=slice_params, force=force
+            self.datasources, form_data=slice_params, force=force
         )
 
     @property
-    def icons(self):
+    def icons(self):  # TODO might be broken with new change to Slice model
         return f"""
         <a
-                href="{self.datasource_edit_url}"
+                href="{self.datasources_edit_urls}"
                 data-toggle="tooltip"
-                title="{self.datasource}">
+                title="{self.datasources}">
             <i class="fa fa-database"></i>
         </a>
         """
@@ -389,7 +393,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
                 session.delete(perm)
 
         slice_id = target.id
-        for ds in target.get_datasource:
+        for ds in target.get_datasources:
             session.add(SlicePerms(slice_id=slice_id, perm=ds.perm))
 
         session.commit()
@@ -459,7 +463,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
         return self.dashboard_title or str(self.id)
 
     @property
-    def table_names(self):
+    def table_names(self):  # TODO broken with Slice model changes
         # pylint: disable=no-member
         return ", ".join({"{}".format(s.datasource.full_name) for s in self.slices})
 
@@ -482,7 +486,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
         return "/superset/dashboard/{}/".format(self.slug or self.id)
 
     @property
-    def datasources(self):
+    def datasources(self):  # TODO broken with Slice model changes
         return {slc.datasource for slc in self.slices}
 
     @property
@@ -677,7 +681,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
             return dashboard_to_import.id
 
     @classmethod
-    def export_dashboards(cls, dashboard_ids):
+    def export_dashboards(cls, dashboard_ids):  # TODO broken with Slice model changes
         copied_dashboards = []
         datasource_ids = set()
         for dashboard_id in dashboard_ids:

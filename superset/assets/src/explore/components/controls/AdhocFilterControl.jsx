@@ -38,7 +38,8 @@ const propTypes = {
   name: PropTypes.string,
   onChange: PropTypes.func,
   value: PropTypes.arrayOf(adhocFilterType),
-  datasource: PropTypes.object,
+  datasources: PropTypes.array,
+  datasources_type: PropTypes.string,
   columns: PropTypes.arrayOf(columnType),
   savedMetrics: PropTypes.arrayOf(savedMetricType),
   formData: PropTypes.shape({
@@ -80,7 +81,8 @@ export default class AdhocFilterControl extends React.Component {
         adhocFilter={adhocFilter}
         onFilterEdit={this.onFilterEdit}
         options={this.state.options}
-        datasource={this.props.datasource}
+        datasources={this.props.datasources}
+        datasources_type={this.props.datasources_type}
       />
     );
     this.state = {
@@ -118,10 +120,10 @@ export default class AdhocFilterControl extends React.Component {
     this.props.onChange(opts.map((option) => {
       if (option.saved_metric_name) {
         return new AdhocFilter({
-          expressionType: this.props.datasource.type === 'druid' ?
+          expressionType: this.props.datasources_type === 'druid' ?
             EXPRESSION_TYPES.SIMPLE :
             EXPRESSION_TYPES.SQL,
-          subject: this.props.datasource.type === 'druid' ?
+          subject: this.props.datasources_type === 'druid' ?
             option.saved_metric_name :
             this.getMetricExpression(option.saved_metric_name),
           operator: OPERATORS['>'],
@@ -130,10 +132,10 @@ export default class AdhocFilterControl extends React.Component {
         });
       } else if (option.label) {
         return new AdhocFilter({
-          expressionType: this.props.datasource.type === 'druid' ?
+          expressionType: this.props.datasources_type === 'druid' ?
             EXPRESSION_TYPES.SIMPLE :
             EXPRESSION_TYPES.SQL,
-          subject: this.props.datasource.type === 'druid' ?
+          subject: this.props.datasources_type === 'druid' ?
             option.label :
             new AdhocMetric(option).translateToSql(),
           operator: OPERATORS['>'],

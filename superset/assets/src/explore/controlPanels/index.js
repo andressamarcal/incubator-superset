@@ -126,7 +126,7 @@ export const controlPanelConfigs = extraOverrides({
 
 export default controlPanelConfigs;
 
-export function sectionsToRender(vizType, datasourceType) {
+export function sectionsToRender(vizType, datasourcesType) {
   const { sectionOverrides = {}, controlPanelSections = [] } = controlPanelConfigs[vizType] || {};
 
   const sectionsCopy = { ...sections };
@@ -142,11 +142,11 @@ export function sectionsToRender(vizType, datasourceType) {
     }
   });
 
-  const { datasourceAndVizType, sqlaTimeSeries, druidTimeSeries, filters } = sectionsCopy;
+  const { datasourcesAndVizType, sqlaTimeSeries, druidTimeSeries, filters } = sectionsCopy;
 
   return [].concat(
-    datasourceAndVizType,
-    datasourceType === 'table' ? sqlaTimeSeries : druidTimeSeries,
+    datasourcesAndVizType,
+    datasourcesType === 'table' ? sqlaTimeSeries : druidTimeSeries,
     isFeatureEnabled(FeatureFlag.SCOPED_FILTER) ? filters : undefined,
     controlPanelSections,
   ).filter(section => section);

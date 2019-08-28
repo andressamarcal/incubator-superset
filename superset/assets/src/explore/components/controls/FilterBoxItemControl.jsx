@@ -21,6 +21,10 @@ import PropTypes from 'prop-types';
 import { OverlayTrigger, Popover } from 'react-bootstrap';
 import { t } from '@superset-ui/translation';
 
+import {
+  mergeColumns,
+  mergeMetrics,
+} from '../../controlUtils'
 import InfoTooltipWithTrigger from '../../../components/InfoTooltipWithTrigger';
 import FormRow from '../../../components/FormRow';
 import SelectControl from './SelectControl';
@@ -28,7 +32,8 @@ import CheckboxControl from './CheckboxControl';
 import TextControl from './TextControl';
 
 const propTypes = {
-  datasource: PropTypes.object.isRequired,
+  datasources: PropTypes.array.isRequired,
+  datasources_type: PropTypes.string.isRequired,
   onChange: PropTypes.func,
   asc: PropTypes.bool,
   clearable: PropTypes.bool,
@@ -77,7 +82,7 @@ export default class FilterBoxItemControl extends React.Component {
               value={this.state.column}
               name="column"
               clearable={false}
-              options={this.props.datasource.columns.map(col => ({
+              options={mergeColumns(this.props.datasources, () => true).map(col => ({
                 value: col.column_name,
                 label: col.column_name,
               }))}
@@ -116,7 +121,7 @@ export default class FilterBoxItemControl extends React.Component {
             <SelectControl
               value={this.state.metric}
               name="column"
-              options={this.props.datasource.metrics.map(m => ({
+              options={mergeMetrics(this.props.datasources, this.props.datasources_type).map(m => ({
                 value: m.metric_name,
                 label: m.metric_name,
               }))}

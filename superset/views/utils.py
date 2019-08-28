@@ -24,7 +24,7 @@ import simplejson as json
 
 from superset import app, db, viz
 from superset.connectors.connector_registry import ConnectorRegistry
-from superset.exceptions import SupersetException
+from superset.exceptions import SupersetException, DifferentDatasourcesTypes
 from superset.legacy import update_time_range
 import superset.models.core as models
 from superset.utils.core import QueryStatus
@@ -77,29 +77,24 @@ def get_permissions(user):
 
 
 def get_viz(
-    slice_id=None, form_data=None, datasource_type=None, datasource_id=None, force=False
+    slice_id=None, form_data=None, datasources_type=None, datasources_ids=None, force=False
 ):
     if slice_id:
         slc = db.session.query(models.Slice).filter_by(id=slice_id).one()
         return slc.get_viz()
     else:
         viz_type = form_data.get("viz_type", "table")
-        if isinstance(datasource_id, list):
-            datasource = []
-            for i in range(len(datasource_id)):
-                ds_id = datasource_id[i]
-                ds_type = datasource_type[i]
 
-                datasource.append(
-                    ConnectorRegistry.get_datasource(
-                        ds_type, ds_id, db.session
-                    )
+        datasources = []
+        for ds_id in datasources_ids:
+
+            datasources.append(
+                ConnectorRegistry.get_datasource(
+                    datasources_type, ds_id, db.session
                 )
-        else:
-            datasource = ConnectorRegistry.get_datasource(
-                    datasource_type, datasource_id, db.session
-                )
-        viz_obj = viz.viz_types[viz_type](datasource, form_data=form_data, force=force)
+            )
+
+        viz_obj = viz.viz_types[viz_type](datasources, form_data=form_data, force=force)
         return viz_obj
 
 
@@ -151,28 +146,11 @@ def get_form_data(slice_id=None, use_slice_data=False):
     return form_data, slc
 
 
-def _process_datasource(datasource, datasource_id=None, datasource_type=None):
-    if "__" in datasource:
-        datasource_id, datasource_type = datasource.split("__")
-        # The case where the datasource has been deleted
-        if datasource_id == "None":
-            datasource_id = None
-
-    if not datasource_id:
-        raise SupersetException(
-            "The datasource associated with this chart no longer exists"
-        )
-
-    datasource_id = int(datasource_id)
-
-    return datasource_id, datasource_type
-
-
 def get_datasource_info(
     datasource_id: Optional[int],
     datasource_type: Optional[str],
     form_data: Dict[str, Any],
-) -> Tuple[Any, Optional[str]]:
+) -> Tuple[List[int], str]:
     """
     Compatibility layer for handling of datasource info
 
@@ -188,21 +166,30 @@ def get_datasource_info(
     :raises SupersetException: If the datasource no longer exists
     """
 
-    datasource = form_data.get("datasource", "")
+    datasources = form_data.get("datasources")
 
-    import logging
-    if isinstance(datasource, list):
-        ds_ids = []
-        ds_types = []
-        for ds in datasource:
-            ds_id, ds_type = _process_datasource(ds)
+    if datasources is not None:
+        if not isinstance(datasources, dict):
+            raise SupersetException(
+                "datasources field should be a dict"
+            )
 
-            ds_ids.append(ds_id)
-            ds_types.append(ds_type)
+        if any(key not in datasources.keys() for key in ["ids", "type"]):
+            raise SupersetException(
+                "datasources field should contain a list of 'ids' and a 'type'"
+            )
 
-        return ds_ids, ds_types
+        ids = datasources["ids"]
+        _type = datasources["type"]
 
-    return _process_datasource(datasource, datasource_id, datasource_type)
+        if any(not isinstance(id, int) for id in ids) or not isinstance(_type, str):
+            raise SupersetException(
+                "'ids' field should contain only ints and type should be a string",
+            )
+
+        return ids, _type
+
+    return [int(datasource_id)], datasource_type
 
 
 def apply_display_max_row_limit(sql_results: Dict[str, Any]) -> Dict[str, Any]:

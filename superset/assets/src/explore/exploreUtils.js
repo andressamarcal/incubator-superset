@@ -62,7 +62,7 @@ export function getURIDirectory(formData, endpointType = 'base') {
 }
 
 export function getExploreLongUrl(formData, endpointType, allowOverflow = true, extraSearch = {}) {
-  if (!formData.datasource) {
+  if (!formData.datasources) {
     return null;
   }
 
@@ -79,7 +79,7 @@ export function getExploreLongUrl(formData, endpointType, allowOverflow = true, 
   const url = uri.directory(directory).search(search).toString();
   if (!allowOverflow && url.length > MAX_URL_LENGTH) {
     const minimalFormData = {
-      datasource: formData.datasource,
+      datasources: formData.datasources,
       viz_type: formData.viz_type,
     };
     return getExploreLongUrl(
@@ -97,7 +97,7 @@ export function getExploreUrlAndPayload({
   allowDomainSharding = false,
   method = 'POST',
 }) {
-  if (!formData.datasource) {
+  if (!formData.datasources) {
     return null;
   }
 

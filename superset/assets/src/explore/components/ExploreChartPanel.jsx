@@ -30,14 +30,14 @@ const propTypes = {
   onQuery: PropTypes.func,
   can_overwrite: PropTypes.bool.isRequired,
   can_download: PropTypes.bool.isRequired,
-  datasource: PropTypes.object,
+  datasources: PropTypes.array,
   column_formats: PropTypes.object,
   containerId: PropTypes.string.isRequired,
   height: PropTypes.string.isRequired,
   width: PropTypes.string.isRequired,
   isStarred: PropTypes.bool.isRequired,
   slice: PropTypes.object,
-  table_name: PropTypes.string,
+  tables_name: PropTypes.array,
   vizType: PropTypes.string.isRequired,
   form_data: PropTypes.object,
   standalone: PropTypes.bool,
@@ -65,7 +65,7 @@ class ExploreChartPanel extends React.PureComponent {
             chartId={chart.id}
             chartStatus={chart.chartStatus}
             triggerRender={this.props.triggerRender}
-            datasource={this.props.datasource}
+            datasources={this.props.datasources}
             errorMessage={this.props.errorMessage}
             formData={this.props.form_data}
             onQuery={this.props.onQuery}
@@ -100,7 +100,7 @@ class ExploreChartPanel extends React.PureComponent {
         can_download={this.props.can_download}
         isStarred={this.props.isStarred}
         slice={this.props.slice}
-        table_name={this.props.table_name}
+        tables_name={this.props.tables_name}
         form_data={this.props.form_data}
         timeout={this.props.timeout}
         chart={this.props.chart}

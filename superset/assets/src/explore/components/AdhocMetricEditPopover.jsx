@@ -44,7 +44,7 @@ const propTypes = {
   onClose: PropTypes.func.isRequired,
   onResize: PropTypes.func.isRequired,
   columns: PropTypes.arrayOf(columnType),
-  datasourceType: PropTypes.string,
+  datasourcesType: PropTypes.string,
 };
 
 const defaultProps = {
@@ -177,7 +177,7 @@ export default class AdhocMetricEditPopover extends React.Component {
       onChange,
       onClose,
       onResize,
-      datasourceType,
+      datasourcesType,
       ...popoverProps
     } = this.props;
 
@@ -206,7 +206,7 @@ export default class AdhocMetricEditPopover extends React.Component {
       valueKey: 'aggregate',
     };
 
-    if (this.props.datasourceType === 'druid') {
+    if (this.props.datasourcesType === 'druid') {
       aggregateSelectProps.options = aggregateSelectProps.options.filter((
         option => option.aggregate !== 'AVG'
       ));
@@ -247,7 +247,7 @@ export default class AdhocMetricEditPopover extends React.Component {
           </Tab>
           <Tab className="adhoc-metric-edit-tab" eventKey={EXPRESSION_TYPES.SQL} title="Custom SQL">
             {
-              this.props.datasourceType !== 'druid' ?
+              this.props.datasourcesType !== 'druid' ?
                 <FormGroup>
                   <AceEditor
                     ref={this.handleAceEditorRef}

@@ -36,7 +36,8 @@ const propTypes = {
     PropTypes.shape({ saved_metric_name: PropTypes.string.isRequired }),
     adhocMetricType,
   ])).isRequired,
-  datasource: PropTypes.object,
+  datasources: PropTypes.array,
+  datasources_type: PropTypes.string,
 };
 
 const startingWidth = 300;
@@ -108,7 +109,6 @@ export default class AdhocFilterEditPopover extends React.Component {
       onChange,
       onClose,
       onResize,
-      datasource,
       ...popoverProps
     } = this.props;
 
@@ -137,7 +137,8 @@ export default class AdhocFilterEditPopover extends React.Component {
               adhocFilter={this.state.adhocFilter}
               onChange={this.onAdhocFilterChange}
               options={this.props.options}
-              datasource={this.props.datasource}
+              datasources={this.props.datasources}
+              datasources_type={this.props.datasources_type}
               onHeightChange={this.adjustHeight}
             />
           </Tab>
@@ -147,7 +148,7 @@ export default class AdhocFilterEditPopover extends React.Component {
             title="Custom SQL"
           >
             {
-              (!this.props.datasource || this.props.datasource.type !== 'druid') ?
+              (!this.props.datasources || this.props.datasources_type !== 'druid') ?
                 <AdhocFilterEditPopoverSqlTabContent
                   adhocFilter={this.state.adhocFilter}
                   onChange={this.onAdhocFilterChange}

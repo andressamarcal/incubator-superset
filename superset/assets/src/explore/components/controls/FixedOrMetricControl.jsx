@@ -20,6 +20,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Label, Panel } from 'react-bootstrap';
 
+import { mergeColumns } from '../../controlUtils';
 import TextControl from './TextControl';
 import MetricsControl from './MetricsControl';
 import ControlHeader from '../ControlHeader';
@@ -34,7 +35,7 @@ const propTypes = {
   onChange: PropTypes.func,
   value: PropTypes.object,
   isFloat: PropTypes.bool,
-  datasource: PropTypes.object.isRequired,
+  datasources: PropTypes.array.isRequired,
   default: PropTypes.shape({
     type: PropTypes.oneOf(['fix', 'metric']),
     value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -89,7 +90,7 @@ export default class FixedOrMetricControl extends React.Component {
   render() {
     const value = this.props.value || this.props.default;
     const type = value.type || controlTypes.fixed;
-    const columns = this.props.datasource ? this.props.datasource.columns : null;
+    const columns = this.props.datasources ? mergeColumns(this.props.datasources, () => true) : null;
     return (
       <div>
         <ControlHeader {...this.props} />
