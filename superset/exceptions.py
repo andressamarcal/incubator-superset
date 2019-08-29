@@ -58,3 +58,9 @@ class SpatialException(SupersetException):
 
 class DatabaseNotFound(SupersetException):
     status = 400
+
+
+class DifferentDatasourcesTypes(SupersetException):
+    # TODO aspedrosa use this
+    def __init__(self):
+        super(SupersetException, self).__init__("The type of all datasources must be the same")

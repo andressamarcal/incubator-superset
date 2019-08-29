@@ -990,7 +990,7 @@ export const controls = {
     type: 'DateFilterControl',
     freeForm: true,
     label: t('Time range'),
-    default: t('No Filter'),
+    default: t('No filter'),
   },
 
   max_bubble_size: {

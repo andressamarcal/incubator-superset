@@ -151,30 +151,30 @@ export function getAllControlsState(vizType, datasourcesType, state, formData) {
 }
 
 export function mergeArraysOfObjects(objects, extractor, filter, equals) {
-  const objectsCount = objects.length;
+  const extractedObjects = objects.map(extractor);
+  const objectsCount = extractedObjects.length;
   if (objectsCount == 0) {
     return [];
   } else if (objectsCount == 1) {
-    return objects.map(extractor)[0].filter(filter);
+    return extractedObjects[0].filter(filter);
   }
-  return objects.reduce((o1, o2) => {
-    const mergedArray = [];
 
-    let o2_array = o2.map(extractor).filter(filter);
 
-    const o1_array = o1.map(extractor).filter(filter);
-    for (const e of o1_array) {
+  let mergedArray = extractedObjects[0].filter(filter);
+  for (let i = 1; i < extractedObjects.length && mergedArray !== []; i++) {
+    const arrayToMerge = extractedObjects[i].filter(filter);
 
-      const prev_length = o2_array.length;
-      o2_array = o2_array.filter(equals(e))
-      const pos_length = o2_array.length;
-
-      if (prev_length != pos_length) {
-        mergedArray.push(e)
+    const newMergedArray = [];
+    for (const e of mergedArray) {
+      if (arrayToMerge.find(equals(e))) {
+        newMergedArray.push(e);
       }
     }
-    return mergedArray;
-  });
+
+    mergedArray = newMergedArray;
+  }
+
+  return mergedArray;
 }
 
 export function mergeColumns(datasources, columnFilter) {
@@ -182,7 +182,7 @@ export function mergeColumns(datasources, columnFilter) {
     datasources,
     ds => ds.columns,
     columnFilter,
-    c1 => (c2 => c1.column != c2.column && c1.type != c2.type && c1.expression != c2.expression)
+    c1 => (c2 => c1.column === c2.column && c1.type === c2.type && c1.expression === c2.expression)
   );
 }
 
@@ -193,10 +193,10 @@ export function mergeMetrics(datasources, datasourceType) {
     e => true,
     m1 => (
       m2 =>
-        m1.metric_type != m2.metric_type &&
+        m1.metric_type === m2.metric_type &&
         (
-          (datasourceType == 'druid' && m1.json != m2.json) ||
-          (datasourceType == 'table' && m1.expression != m2.expression))
+          (datasourceType == 'druid' && m1.json === m2.json) ||
+          (datasourceType == 'table' && m1.expression === m2.expression))
         )
   );
 }

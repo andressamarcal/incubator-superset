@@ -102,6 +102,7 @@ export const controlPanelConfigs = extraOverrides({
   para: Para,
   partition: Partition,
   pie: Pie,
+  multi_source_pie: Pie,
   pivot_table: PivotTable,
   rose: Rose,
   sankey: Sankey,

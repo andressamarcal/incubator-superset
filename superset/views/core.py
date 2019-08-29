@@ -82,6 +82,7 @@ from superset.utils import core as utils
 from superset.utils import dashboard_import_export
 from superset.utils.dates import now_as_float
 from superset.utils.decorators import etag_cache, stats_timing
+from superset.viz import MulitpleDatasourceViz
 from .base import (
     api,
     BaseSupersetView,
@@ -168,7 +169,8 @@ def check_datasource_perms(
         force=False,
     )
 
-    security_manager.assert_datasource_permission(viz_obj.datasource)
+    for ds in viz_obj.get_datasources():
+        security_manager.assert_datasource_permission(ds)
 
 
 def check_slice_perms(self, slice_id):
@@ -188,7 +190,9 @@ def check_slice_perms(self, slice_id):
         form_data=form_data,
         force=False,
     )
-    security_manager.assert_datasource_permission(viz_obj.datasource)
+
+    for ds in viz_obj.get_datasources():
+        security_manager.assert_datasource_permission(ds)
 
 
 def _deserialize_results_payload(
@@ -407,7 +411,11 @@ class SliceModelView(SupersetModelView, DeleteMixin):  # noqa
     def add(self):
         datasources = ConnectorRegistry.get_all_datasources(db.session)
         datasources = [
-            {"value": str(d.id) + "__" + d.type, "label": repr(d)} for d in datasources
+            {
+                "value": f"{d.id}__{d.type}",
+                "label": f"{d.type}: {repr(d)}"
+            }
+            for d in datasources
         ]
         return self.render_template(
             "superset/add_slice.html",
@@ -1008,25 +1016,22 @@ class Superset(BaseSupersetView):
         return redirect(endpoint)
 
     def get_query_string_response(self, viz_obj):
+        # TODO aspedrosa
+        # does this need to return multiple queries?
+        # does multiple sql/druid databases have different queries?
         query = None
         try:
             query_obj = viz_obj.query_obj()
             if query_obj:
-                if isinstance(viz_obj.datasource, list):
-                    query = [ds.get_query_str(query_obj) for ds in viz_obj.datasource]
-                else:
-                    query = viz_obj.datasource.get_query_str(query_obj)
+                query = [ds.get_query_str(query_obj) for ds in viz_obj.get_datasources()]
         except Exception as e:
             logging.exception(e)
             return json_error_response(e)
 
         if not query:
-            if isinstance(viz_obj.datasource, list):
-                query = ["No query." for ___ in viz_obj.datasource]
-            else:
-                query = "No query."
+            query = ["No query." for ___ in viz_obj.get_datasources()]
 
-        if isinstance(viz_obj.datasource, list):
+        if isinstance(viz_obj.datasource, list):  # TODO aspedrosa fix this by using get_datasources()
             response = {
                 "query"          : query,
                 "language"       : [],
@@ -1258,7 +1263,7 @@ class Superset(BaseSupersetView):
 
         viz_type = form_data.get("viz_type")
         if not viz_type and datasources[0].default_endpoint:
-            # TODO if no viz is defined can I be sure that there's only on datasource?
+            # TODO aspedrosa if no viz is defined can I be sure that there's only one datasource?
             return redirect(datasources[0].default_endpoint)
 
         # slc perms
@@ -1320,7 +1325,7 @@ class Superset(BaseSupersetView):
         }
         if slc:
             title = slc.slice_name
-        elif not viz_type:  # TODO some as the todo above
+        elif not viz_type:  # TODO aspedrosa some as the todo above
             table_name = (
                 datasources[0].table_name
                 if datasources_type == "table"
@@ -1403,7 +1408,7 @@ class Superset(BaseSupersetView):
         datasource_id,
         datasource_type,
         datasource_name,
-    ):  # TODO broken with new changes on the Slice model
+    ):  # TODO aspedrosa broken with new changes on the Slice model
         """Save or overwrite a slice"""
         slice_name = args.get("slice_name")
         action = args.get("action")
@@ -2207,9 +2212,9 @@ class Superset(BaseSupersetView):
             abort(404)
         datasources = set()
         for slc in dash.slices:
-            datasource = slc.datasource
-            if datasource:
-                datasources.add(datasource)
+            slc_datasources = slc.datasources
+            if slc_datasources:
+                datasources.update(slc_datasources)
 
         if config.get("ENABLE_ACCESS_REQUEST"):
             for datasource in datasources:
@@ -2994,7 +2999,10 @@ class Superset(BaseSupersetView):
         get the database query string for this slice
         """
         viz_obj = get_viz(slice_id)
-        security_manager.assert_datasource_permission(viz_obj.datasource)
+
+        for ds in viz_obj.get_datasources():
+            security_manager.assert_datasource_permission(ds)
+
         return self.get_query_string_response(viz_obj)
 
     @api

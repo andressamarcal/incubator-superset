@@ -176,11 +176,30 @@ class ChartRenderer extends React.Component {
     return null;
   }
 
+  mergeDatasourcesField(datasources, fieldExtractor) {
+    const arrayOfObjectsToMerge = datasources.map(fieldExtractor);
+
+    let mergedObject = arrayOfObjectsToMerge[0];
+    for (let i = 1; i < arrayOfObjectsToMerge.length && mergedObject !== {}; i++) {
+      const objectToMerge = arrayOfObjectsToMerge[i];
+
+      const newMergedObject = {};
+      for (let [key, value] of Object.entries(mergedObject)) {
+        if (value === objectToMerge[key]) {
+          newMergedObject[key] = value;
+        }
+      }
+
+      mergedObject = newMergedObject;
+    }
+
+    return mergedObject;
+  }
+
   render() {
     const {
       chartAlert,
       chartStatus,
-      vizType,
       chartId,
     } = this.props;
 
@@ -197,9 +216,27 @@ class ChartRenderer extends React.Component {
       annotationData,
       datasources,
       initialValues,
-      formData,
       queryResponse,
     } = this.props;
+
+    const datasource = {
+      verbose_map: this.mergeDatasourcesField(
+        datasources,
+        ds => ds.verbose_map,
+      ),
+      columnFormats: this.mergeDatasourcesField(
+        datasources,
+        ds => ds.column_formats,
+      )
+    };
+
+    const formData = {...this.props.formData};
+    let vizType = this.props.vizType;
+    if (vizType.startsWith("multi_source_")) {
+      vizType = vizType.substring(13);
+      formData.viz_type = vizType;
+    }
+
 
     return (
       <React.Fragment>
@@ -212,7 +249,7 @@ class ChartRenderer extends React.Component {
           width={width}
           height={height}
           annotationData={annotationData}
-          datasource={{datasources:datasources}}
+          datasource={datasource}
           initialValues={initialValues}
           formData={formData}
           hooks={this.hooks}

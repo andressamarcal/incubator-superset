@@ -127,7 +127,7 @@ export default class VizTypeControl extends React.PureComponent {
         key: type,
         value: registry.get(type),
       }))
-      .concat(registry.entries().filter(({ key }) => !typesWithDefaultOrder.has(key)))
+      .concat(registry.entries().filter(({ key }) => !key.startsWith("multi_source_") && !typesWithDefaultOrder.has(key)))
       .filter(entry => entry.value.name.toLowerCase().includes(filterString));
 
     const rows = [];

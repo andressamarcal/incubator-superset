@@ -164,7 +164,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
     perms = relationship(SlicePerms)
     owners = relationship(security_manager.user_model, secondary=slice_user)
 
-    export_fields = (  # TODO with changes for multiple datasources might need changes
+    export_fields = (  # TODO aspedrosa with changes for multiple datasources might need changes
         "slice_name",
         "datasources_type",
         "viz_type",
@@ -179,7 +179,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
     def datasources(self):
         return self.get_datasources
 
-    def clone(self):  # TODO with changes for multiple datasources might not work
+    def clone(self):  # TODO aspedrosa with changes for multiple datasources might not work
         return Slice(
             slice_name=self.slice_name,
             datasources_type=self.datasources_type,
@@ -204,7 +204,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
         return reduce(lambda l1, l2: l1 + escape(", ") + l2, [ds.link for ds in datasources])
 
     @property
-    def datasources_edit_url(self):  # TODO with changes for multiple datasources might not work properly
+    def datasources_edit_url(self):  # TODO aspedrosa with changes for multiple datasources might not work properly
         # pylint: disable=no-member
         return [ds.url for ds in self.datasources]
 
@@ -327,7 +327,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
         )
 
     @property
-    def icons(self):  # TODO might be broken with new change to Slice model
+    def icons(self):  # TODO aspedrosa might be broken with new change to Slice model
         return f"""
         <a
                 href="{self.datasources_edit_urls}"
@@ -339,7 +339,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
 
     @classmethod
     def import_obj(cls, slc_to_import, slc_to_override, import_time=None):
-        # TODO with changes for multiple datasources might not work
+        # TODO aspedrosa with changes for multiple datasources might not work
         """Inserts or overrides slc in the database.
 
         remote_id and import_time fields in params_dict are set to track the
@@ -463,7 +463,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
         return self.dashboard_title or str(self.id)
 
     @property
-    def table_names(self):  # TODO broken with Slice model changes
+    def table_names(self):  # TODO aspedrosa broken with Slice model changes
         # pylint: disable=no-member
         return ", ".join({"{}".format(s.datasource.full_name) for s in self.slices})
 
@@ -486,7 +486,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
         return "/superset/dashboard/{}/".format(self.slug or self.id)
 
     @property
-    def datasources(self):  # TODO broken with Slice model changes
+    def datasources(self):  # TODO aspedrosa broken with Slice model changes
         return {slc.datasource for slc in self.slices}
 
     @property
@@ -681,7 +681,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
             return dashboard_to_import.id
 
     @classmethod
-    def export_dashboards(cls, dashboard_ids):  # TODO broken with Slice model changes
+    def export_dashboards(cls, dashboard_ids):  # TODO aspedrosa broken with Slice model changes
         copied_dashboards = []
         datasource_ids = set()
         for dashboard_id in dashboard_ids:

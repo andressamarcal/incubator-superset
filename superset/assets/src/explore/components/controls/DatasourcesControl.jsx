@@ -142,7 +142,7 @@ class DatasourcesControl extends React.PureComponent {
     const value = `${datasource.id}__${this.props.datasources_type}`;
 
     return (
-      <Col md={6} key={datasource}>
+      <Row key={datasources_idx} style={{marginBottom: datasources_idx == this.props.datasources.length - 1 ? 0 : 5}}>
         <div className="btn-group label-dropdown">
           <OverlayTrigger
             placement="right"
@@ -205,19 +205,19 @@ class DatasourcesControl extends React.PureComponent {
           </OverlayTrigger>
         </div>
         <Collapse in={showDatasource}>{this.renderDatasource(datasource)}</Collapse>
-        <DatasourceModal  // TODO might need changes because of the new multiple datasource support
+        <DatasourceModal  // TODO aspedrosa might need changes because of the new multiple datasource support
           datasource={datasource}
           show={showEditDatasourceModal}
           onDatasourceSave={onDatasourceSave}
           onHide={() => this.toggleEditDatasourceModal(datasources_idx)}
         />
-        <ChangeDatasourceModal  // TODO might need changes because of the new multiple datasource support
+        <ChangeDatasourceModal  // TODO aspedrosa might need changes because of the new multiple datasource support
           onDatasourceSave={onDatasourceSave}
           onHide={() => this.toggleChangeDatasourceModal(datasources_idx)}
           show={showChangeDatasourceModal}
           onChange={onChange}
         />
-      </Col>
+      </Row>
     );
   }
 
@@ -225,9 +225,7 @@ class DatasourcesControl extends React.PureComponent {
     return (
       <div>
         <ControlHeader {...this.props} />
-        <Row>
-          {_.range(this.props.datasources.length).map(this.renderDatasources)}
-        </Row>
+        {_.range(this.props.datasources.length).map(this.renderDatasources)}
       </div>
     );
   }

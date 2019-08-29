@@ -119,6 +119,9 @@ class BaseViz(object):
 
         self.process_metrics()
 
+    def get_datasources(self):
+        return [self.datasource]
+
     def process_metrics(self):
         # metrics in TableViz is order sensitive, so metric_dict should be
         # OrderedDict
@@ -501,6 +504,7 @@ class BaseViz(object):
     def json_data(self):
         return json.dumps(self.data)
 
+
 class MulitpleDatasourceViz(BaseViz):
 
     """All visualizations derive this base class"""
@@ -543,6 +547,9 @@ class MulitpleDatasourceViz(BaseViz):
         self._extra_chart_data = []
 
         self.process_metrics()
+
+    def get_datasources(self):
+        return self.datasources
 
     def get_samples(self):
         query_obj = self.query_obj()
@@ -664,8 +671,8 @@ class MulitpleDatasourceViz(BaseViz):
 
         cache_dict["time_range"] = self.form_data.get("time_range")
         for i, ds in enumerate(self.datasources):
-            cache_dict["datasource" + i] = ds.uid
-            cache_dict["extra_cache_keys" + i] = ds.get_extra_cache_keys(query_obj)
+            cache_dict[f"datasource{i}"] = ds.uid
+            cache_dict[f"extra_cache_keys{i}"] = ds.get_extra_cache_keys(query_obj)
         json_data = self.json_dumps(cache_dict, sort_keys=True)
         return hashlib.md5(json_data.encode("utf-8")).hexdigest()
 
@@ -1766,20 +1773,17 @@ class MultipleDatasourcePieViz(DistributionPieViz, MulitpleDatasourceViz):
         return d
 
     def get_data(self, dfs):
-        if not all(df.shape == (1, 1) for df in dfs.values()):
+        if not all(df.shape == (1, 2) for df in dfs.values()):
             raise Exception("All datasources must return a scalar")
 
-        aggregated_df = pd.DataFrame(columns=["x", "y"])
+        data = []
 
         for datasource, df in dfs.items():
             metric = self.metric_labels[0]
-            df = dfs.pivot_table(values=[metric], dropna=False)
-            df.sort_values(by=metric, ascending=False, inplace=True)
-            df = df.reset_index()
 
-            aggregated_df.append({"x": datasource, "y": df.at[0, metric]})
+            data.append({"x": datasource, "y": df.at[0, metric]})
 
-        return aggregated_df.to_dict(orient="records")
+        return data
 
 
 class HistogramViz(BaseViz):

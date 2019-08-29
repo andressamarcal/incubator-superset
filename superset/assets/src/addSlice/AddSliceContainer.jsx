@@ -52,8 +52,11 @@ export default class AddSliceContainer extends React.PureComponent {
   exploreUrl() {
     const formData = encodeURIComponent(
       JSON.stringify({
-        viz_type: this.state.visType,
-        datasource: this.state.datasourceValue,
+        viz_type: (this.state.multipleDatasource ? "multi_source_" : "") + this.state.visType,
+        datasources: {
+          ids: this.state.datasourcesIds,
+          type: this.state.datasourcesType,
+        }
       }));
     return `/superset/explore/?form_data=${formData}`;
   }
@@ -64,17 +67,25 @@ export default class AddSliceContainer extends React.PureComponent {
 
   changeDatasource(e) {
     if (this.state.multipleDatasource) {
+      if (e.length > 1 && e.some(ds => ds.value.split("__")[1] != e[0].value.split("__")[1])) {
+        return;  // TODO show some error box
+      }
+      else {
+        const types = e.map(ds => ds.value.split("__")[1]);
+        this.setState({
+          datasourcesType: types.length ? types[0] : null,
+        });
+      }
       this.setState({
-        datasourceValue: e.map(datasource => datasource.value),
-        datasourceId: e.map(datasource => datasource.value.split('__')[0]),
-        datasourceType: e.map(datasource => datasource.value.split('__')[1]),
+        datasourcesValue: e.map(ds => ds.value),
+        datasourcesIds: e.map(ds => parseInt(ds.value.split("__")[0])),
       });
     }
     else {
       this.setState({
-        datasourceValue: e.value,
-        datasourceId: e.value.split('__')[0],
-        datasourceType: e.value.split('__')[1],
+        datasourcesValue: e.value,
+        datasourcesIds: [parseInt(e.value.split("__")[0])],
+        datasourcesType: e.value.split("__")[1],
       });
     }
   }
@@ -84,9 +95,9 @@ export default class AddSliceContainer extends React.PureComponent {
 
     if (!multipleDatasource) {
       this.setState({
-        datasourceValue: undefined,
-        datasourceId: undefined,
-        datasourceType: undefined,
+        datasourcesValue: null,
+        datasourcesIds: null,
+        datasourcesType: null,
       });
     }
 
@@ -104,19 +115,16 @@ export default class AddSliceContainer extends React.PureComponent {
     if (!supportsMultiDatasource) {
       this.setState({
         multipleDatasource: false,
-        datasourceValue: undefined,
-        datasourceId: undefined,
-        datasourceType: undefined,
+        datasourcesValue: null,
+        datasourcesIds: null,
+        datasourcesType: null,
       });
     }
   }
 
   isBtnDisabled() {
-    if (this.state.multipleDatasource) {
-      const dsId = this.state.datasourceId;
-      return !(dsId && dsId.length > 0 && this.state.visType);
-    }
-    return !(this.state.datasourceId && this.state.visType);
+    const dssIds = this.state.datasourcesIds;
+    return !(dssIds && dssIds.length && this.state.visType);
   }
 
   render() {
@@ -134,7 +142,7 @@ export default class AddSliceContainer extends React.PureComponent {
                 options={this.props.datasources}
                 placeholder={t('Choose a datasource')}
                 style={styleSelectWidth}
-                value={this.state.datasourceValue}
+                value={this.state.datasourcesValue}
                 width={600}
                 multi={this.state.multipleDatasource}
               />

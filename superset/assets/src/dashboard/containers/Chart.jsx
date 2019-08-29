@@ -46,11 +46,17 @@ function mapStateToProps(
   const { colorScheme, colorNamespace } = dashboardState;
   const filters = getActiveFilters();
 
+  const slice_datasources = [];
+  if (chart && chart.form_data) {
+    const datasources_type = chart.form_data.datasources.type;
+    for (const ds_id of chart.form_data.datasources.ids) {
+      slice_datasources.push(datasources[`${ds_id}__${datasources_type}`]);
+    }
+  }
+
   return {
     chart,
-    datasource:
-      (chart && chart.form_data && datasources[chart.form_data.datasource]) ||
-      {},
+    datasources: slice_datasources,
     slice: sliceEntities.slices[id],
     timeout: dashboardInfo.common.conf.SUPERSET_WEBSERVER_TIMEOUT,
     filters: filters || EMPTY_FILTERS,

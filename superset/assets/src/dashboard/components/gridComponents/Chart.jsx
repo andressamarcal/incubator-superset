@@ -42,7 +42,7 @@ const propTypes = {
   // from redux
   chart: chartPropShape.isRequired,
   formData: PropTypes.object.isRequired,
-  datasource: PropTypes.object.isRequired,
+  datasources: PropTypes.array.isRequired,
   slice: slicePropShape.isRequired,
   sliceName: PropTypes.string.isRequired,
   timeout: PropTypes.number.isRequired,
@@ -199,7 +199,7 @@ class Chart extends React.Component {
       componentId,
       chart,
       slice,
-      datasource,
+      datasources,
       isExpanded,
       editMode,
       filters,
@@ -282,7 +282,7 @@ class Chart extends React.Component {
             chartAlert={chart.chartAlert}
             chartId={id}
             chartStatus={chart.chartStatus}
-            datasource={datasource}
+            datasources={datasources}
             initialValues={filters[id]}
             formData={formData}
             queryResponse={chart.queryResponse}

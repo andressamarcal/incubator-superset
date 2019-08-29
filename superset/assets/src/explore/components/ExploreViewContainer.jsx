@@ -103,7 +103,7 @@ class ExploreViewContainer extends React.Component {
     }
   }
 
-  componentWillReceiveProps(nextProps) {  // TODO might need changes since the new support for multiple datasource
+  componentWillReceiveProps(nextProps) {  // TODO aspedrosa might need changes since the new support for multiple datasource
     if (nextProps.controls.viz_type.value !== this.props.controls.viz_type.value) {
       this.props.actions.resetControls();
     }
